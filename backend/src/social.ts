@@ -1,6 +1,7 @@
 // Events from the business's social accounts (Zernio webhooks + polling) → proposals for the owner.
 import { createAction, deliverProposals, type ReplyCommentPayload, type ReplyDmPayload, type ReplyReviewPayload } from "./actions.js";
 import { draftReply } from "./agent/drafts.js";
+import { syncAccounts } from "./accounts.js";
 import { addEvent, db, getBusiness, getBusinessByProfile, markSeen, upsertAccount, type Business } from "./db.js";
 import { handleOwnerMessage, type InboxMessageEvent } from "./inbound.js";
 import { platformName, stars, t } from "./i18n.js";
@@ -184,15 +185,22 @@ interface AccountEv {
 async function onAccountConnected(ev: Base, a: AccountEv): Promise<void> {
   const biz = await businessFor(ev, a.profileId);
   if (!biz) return;
-  await upsertAccount({
-    business_id: biz.id,
-    zernio_account_id: a.accountId,
-    platform: a.platform,
-    username: a.username ?? null,
-    display_name: a.displayName ?? null,
-    profile_picture: null,
-    status: "connected",
-  });
+  // The webhook carries no picture: sync the profile's accounts from Zernio so the dashboard gets the
+  // avatar (and a sync that already ran is not overwritten with a null picture).
+  try {
+    await syncAccounts(biz);
+  } catch (e) {
+    console.error("[account.connected] sync failed, storing the webhook data only:", e instanceof Error ? e.message : e);
+    await upsertAccount({
+      business_id: biz.id,
+      zernio_account_id: a.accountId,
+      platform: a.platform,
+      username: a.username ?? null,
+      display_name: a.displayName ?? null,
+      profile_picture: null,
+      status: "connected",
+    });
+  }
   await addEvent(biz.id, "account.connected", `${platformName(a.platform)} ${a.username ? "@" + a.username : ""}`.trim());
   await sendToOwner(biz, t(biz.language).accountConnected(platformName(a.platform), a.username ? `@${a.username}` : ""));
 }

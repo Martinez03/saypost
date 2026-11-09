@@ -50,12 +50,24 @@ export function AccountsGrid({ accounts, connected, invite }: { accounts: Row[];
       if (opts.platform) toast.success(a.connectedToast(platformName(opts.platform)));
       else if (!opts.quiet) toast.success(a.synced);
     } catch (e) {
-      toast.error(errorText(e));
+      if (!opts.quiet) toast.error(errorText(e));
     } finally {
       setSyncing(false);
       startTransition(() => router.refresh());
     }
   }
+
+  // Profile pictures come from Zernio's account list (the connect webhook carries none, and platform
+  // CDN links expire): if a connected account has no picture, refresh quietly once per visit.
+  const refreshedPictures = useRef(false);
+  useEffect(() => {
+    if (connected || refreshedPictures.current) return;
+    if (!accounts.some((x) => x.status === "connected" && !x.profile_picture)) return;
+    refreshedPictures.current = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount
+    void sync({ quiet: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per visit
+  }, []);
 
   // Back from Zernio's connect flow (?connected=<platform>): sync once, then clean the URL.
   useEffect(() => {
