@@ -35,6 +35,18 @@ export interface Business {
   notify_dms: boolean;
 }
 
+export type WorkspaceKind = "business" | "agency";
+
+export interface Workspace {
+  id: string;
+  name: string;
+  kind: WorkspaceKind;
+  brand_name: string | null;
+  logo_url: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
 export interface SocialAccount {
   id: string;
   business_id: string;
@@ -44,6 +56,7 @@ export interface SocialAccount {
   display_name: string | null;
   profile_picture: string | null;
   status: "connected" | "disconnected";
+  created_at?: string;
 }
 
 export type ActionKind = "publish" | "reply_review" | "reply_comment" | "reply_dm" | "cancel_post" | "boost";
@@ -102,6 +115,18 @@ export async function businessesInWorkspaces(workspaceIds: string[]): Promise<Bu
     await db.from("businesses").select("*").in("workspace_id", workspaceIds).order("created_at").order("id"),
     "businessesInWorkspaces",
   ) as Business[];
+}
+
+export async function getWorkspace(id: string): Promise<Workspace | null> {
+  return check(await db.from("workspaces").select("*").eq("id", id).maybeSingle(), "getWorkspace") as Workspace | null;
+}
+
+/** The user's memberships with their role, oldest first. */
+export async function userMemberships(userId: string): Promise<{ workspace_id: string; role: "owner" | "member" }[]> {
+  return check(
+    await db.from("workspace_members").select("workspace_id, role, created_at").eq("user_id", userId).order("created_at"),
+    "userMemberships",
+  ) as { workspace_id: string; role: "owner" | "member" }[];
 }
 
 export async function getBusinessByPhone(phone: string): Promise<Business | null> {

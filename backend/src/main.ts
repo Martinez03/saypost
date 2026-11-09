@@ -2,6 +2,7 @@ import cors from "@fastify/cors";
 import Fastify from "fastify";
 import { config, isAllowedOrigin } from "./config.js";
 import { apiRoutes } from "./routes/api.js";
+import { publicRoutes } from "./routes/public.js";
 import { webhookRoutes } from "./routes/webhooks.js";
 import { pollReviews } from "./social.js";
 
@@ -23,13 +24,14 @@ await app.register(cors, {
     if (!origin) return cb(null, true);
     cb(null, isAllowedOrigin(origin));
   },
-  methods: ["GET", "POST", "DELETE", "OPTIONS"],
+  methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Authorization", "Content-Type", "X-Business-Id"],
 });
 
 app.get("/health", async () => ({ ok: true, zernio: !!config.zernioKey, claude: !!config.anthropicKey, transcribe: !!config.openaiKey }));
 await app.register(webhookRoutes);
 await app.register(async (scoped) => apiRoutes(scoped));
+await app.register(async (scoped) => publicRoutes(scoped));
 
 if (config.reviewPollSeconds > 0) {
   let running = false;

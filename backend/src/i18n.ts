@@ -32,6 +32,7 @@ const es = {
   evAgentError: "Saypost no pudo responder",
   evWhatsappOn: "WhatsApp activado",
   evRejected: (title: string) => `Descartado: ${title}`,
+  evInviteConnected: (platform: string, user: string) => `Tu cliente conectó ${platform}${user ? ` (${user})` : ""} desde la invitación`,
   agencyReviews: "Recibido 👍 Tu agencia lo revisa y te aviso cuando esté publicado.",
   agencyDecides: "Eso lo aprueba tu agencia desde su panel. Te aviso en cuanto esté publicado 👍",
 };
@@ -67,6 +68,7 @@ const en: typeof es = {
   evAgentError: "Saypost could not answer",
   evWhatsappOn: "WhatsApp activated",
   evRejected: (title: string) => `Dropped: ${title}`,
+  evInviteConnected: (platform: string, user: string) => `Your client connected ${platform}${user ? ` (${user})` : ""} from the invite link`,
   agencyReviews: "Got it 👍 Your agency will review it and I'll let you know once it's posted.",
   agencyDecides: "Your agency approves that from their dashboard. I'll let you know once it's posted 👍",
 };

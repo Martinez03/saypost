@@ -1,13 +1,13 @@
 // Dashboard endpoints. Every /api/* call carries the user's Supabase access token.
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { ensureProfile, isPlatform, syncAccounts } from "../accounts.js";
 import { approveAction, rejectAction } from "../actions.js";
 import { isApprovalMode } from "../approval.js";
 import { config } from "../config.js";
-import { businessesInWorkspaces, db, getAction, updateBusiness, upsertAccount, userWorkspaceIds, type Business } from "../db.js";
+import { businessesInWorkspaces, db, getAction, getWorkspace, updateBusiness, userMemberships, userWorkspaceIds, type Business } from "../db.js";
+import { hashInviteToken, inviteUrl, isHttpsUrl, newInviteToken } from "../invites.js";
 import { canActOn, pickBusiness } from "../scope.js";
 import * as zernio from "../zernio.js";
-
-const PLATFORMS = new Set(["instagram", "facebook", "googlebusiness", "linkedin", "tiktok", "twitter", "threads", "bluesky", "youtube", "pinterest"]);
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -21,7 +21,7 @@ declare module "fastify" {
 }
 
 /** Routes that work before the user has a business. */
-const NO_BUSINESS_NEEDED = new Set(["/api/businesses"]);
+const NO_BUSINESS_NEEDED = new Set(["/api/businesses", "/api/workspace"]);
 const TONES = new Set(["friendly", "professional", "fun", "elegant"]);
 
 function fail(reply: FastifyReply, status: number, error: string, message?: string) {
@@ -37,10 +37,10 @@ async function auth(req: FastifyRequest, reply: FastifyReply) {
   req.userId = data.user.id;
   req.workspaceIds = await userWorkspaceIds(data.user.id);
   req.businesses = await businessesInWorkspaces(req.workspaceIds);
-  if (NO_BUSINESS_NEEDED.has(req.routeOptions.url ?? "")) return;
   const scope = pickBusiness(req.businesses, req.headers["x-business-id"]);
-  if (!scope.ok) return fail(reply, scope.status, scope.error, scope.status === 404 ? "Create your business first" : "That business is not in your workspace");
-  req.biz = scope.biz;
+  if (scope.ok) req.biz = scope.biz;
+  else if (!NO_BUSINESS_NEEDED.has(req.routeOptions.url ?? ""))
+    return fail(reply, scope.status, scope.error, scope.status === 404 ? "Create your business first" : "That business is not in your workspace");
 }
 
 function text(v: unknown, max: number): string | null {
@@ -48,36 +48,22 @@ function text(v: unknown, max: number): string | null {
   return s ? s.slice(0, max) : null;
 }
 
-async function ensureProfile(biz: Business): Promise<string> {
-  if (biz.zernio_profile_id) return biz.zernio_profile_id;
-  const existing = await zernio.findProfileByExternalId(biz.id).catch(() => null);
-  const profile = existing ?? (await zernio.createProfile(`${biz.name} · ${biz.id.slice(0, 6)}`, biz.id, biz.timezone));
-  await updateBusiness(biz.id, { zernio_profile_id: profile._id });
-  biz.zernio_profile_id = profile._id;
-  return profile._id;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Agency branding from a request body: `undefined` = not sent, `null` = clear it. */
+function brandFields(b: Record<string, unknown>): { ok: true; brand_name?: string | null; logo_url?: string | null } | { ok: false; error: string; message: string } {
+  const out: { ok: true; brand_name?: string | null; logo_url?: string | null } = { ok: true };
+  if (b.brand_name !== undefined) out.brand_name = text(b.brand_name, 60);
+  if (b.logo_url !== undefined) {
+    const url = text(b.logo_url, 2048);
+    if (url && !isHttpsUrl(url)) return { ok: false, error: "bad_logo_url", message: "The logo must be an https:// link" };
+    out.logo_url = url;
+  }
+  return out;
 }
 
-async function syncAccounts(biz: Business) {
-  const profileId = await ensureProfile(biz);
-  const remote = await zernio.listAccounts(profileId);
-  const seen = new Set<string>();
-  for (const a of remote) {
-    seen.add(a._id);
-    await upsertAccount({
-      business_id: biz.id,
-      zernio_account_id: a._id,
-      platform: a.platform,
-      username: a.username ?? null,
-      display_name: a.displayName ?? null,
-      profile_picture: a.profilePicture ?? null,
-      status: a.isActive === false ? "disconnected" : "connected",
-    });
-  }
-  const { data: local } = await db.from("social_accounts").select("id, zernio_account_id").eq("business_id", biz.id).eq("status", "connected");
-  const gone = (local ?? []).filter((l: { zernio_account_id: string }) => !seen.has(l.zernio_account_id)).map((l: { id: string }) => l.id);
-  if (gone.length) await db.from("social_accounts").update({ status: "disconnected" }).in("id", gone);
-  const { data } = await db.from("social_accounts").select("*").eq("business_id", biz.id).order("created_at");
-  return data ?? [];
+function workspaceJson(ws: { id: string; name: string; kind: string; brand_name: string | null; logo_url: string | null }) {
+  return { id: ws.id, name: ws.name, kind: ws.kind, brandName: ws.brand_name, logoUrl: ws.logo_url };
 }
 
 function zernioFail(reply: FastifyReply, e: unknown) {
@@ -154,9 +140,106 @@ export async function apiRoutes(app: FastifyInstance) {
     return reply.code(201).send({ business: data });
   });
 
+  // Onboarding: "for your business or are you an agency?". Sets the kind and branding of the user's own
+  // workspace (the first one they own), creating it if they have none yet. No business needed.
+  app.post<{ Body: Record<string, unknown> }>("/api/workspace", async (req, reply) => {
+    const b = req.body ?? {};
+    const kind = b.kind;
+    if (kind !== "business" && kind !== "agency") return fail(reply, 400, "bad_kind");
+    const brand = brandFields({ ...b, brand_name: b.brand_name ?? b.name });
+    if (!brand.ok) return fail(reply, 400, brand.error, brand.message);
+    if (kind === "agency" && !brand.brand_name) return fail(reply, 400, "bad_name", "The agency needs a name");
+    const owned = (await userMemberships(req.userId!)).find((m) => m.role === "owner");
+    const patch = { kind, ...(kind === "agency" ? { name: brand.brand_name!, brand_name: brand.brand_name, logo_url: brand.logo_url ?? null } : {}) };
+    if (owned) {
+      const { data, error } = await db.from("workspaces").update(patch).eq("id", owned.workspace_id).select("*").single();
+      if (error) return fail(reply, 400, "update_failed", error.message);
+      return { workspace: workspaceJson(data) };
+    }
+    const { data: ws, error } = await db
+      .from("workspaces")
+      .insert({ name: brand.brand_name ?? "Saypost", created_by: req.userId, ...patch })
+      .select("*")
+      .single();
+    if (error) return fail(reply, 400, "create_failed", error.message);
+    const { error: e2 } = await db.from("workspace_members").insert({ workspace_id: ws.id, user_id: req.userId, role: "owner" });
+    if (e2) throw new Error(`add member: ${e2.message}`);
+    return reply.code(201).send({ workspace: workspaceJson(ws) });
+  });
+
+  // Settings: agency branding (and kind) of the selected business's workspace. Owners only.
+  app.patch<{ Body: Record<string, unknown> }>("/api/workspace", async (req, reply) => {
+    const biz = req.biz;
+    if (!biz) return fail(reply, 404, "no_business");
+    const role = (await userMemberships(req.userId!)).find((m) => m.workspace_id === biz.workspace_id)?.role;
+    if (role !== "owner") return fail(reply, 403, "forbidden_workspace", "Only the workspace owner can change this");
+    const b = req.body ?? {};
+    const brand = brandFields(b);
+    if (!brand.ok) return fail(reply, 400, brand.error, brand.message);
+    const patch: Record<string, unknown> = {};
+    if (brand.brand_name !== undefined) patch.brand_name = brand.brand_name;
+    if (brand.logo_url !== undefined) patch.logo_url = brand.logo_url;
+    if (b.kind !== undefined) {
+      if (b.kind !== "business" && b.kind !== "agency") return fail(reply, 400, "bad_kind");
+      patch.kind = b.kind;
+    }
+    if (!Object.keys(patch).length) {
+      const ws = await getWorkspace(biz.workspace_id);
+      return { workspace: ws ? workspaceJson(ws) : null };
+    }
+    const { data, error } = await db.from("workspaces").update(patch).eq("id", biz.workspace_id).select("*").single();
+    if (error) return fail(reply, 400, "update_failed", error.message);
+    return { workspace: workspaceJson(data) };
+  });
+
+  // Client invite links for the selected business. The token is returned once, here; only its hash is kept.
+  app.post("/api/invites", async (req, reply) => {
+    const token = newInviteToken();
+    const { data, error } = await db
+      .from("invites")
+      .insert({ business_id: req.biz!.id, token_hash: hashInviteToken(token), created_by: req.userId })
+      .select("id, expires_at")
+      .single();
+    if (error) throw new Error(`create invite: ${error.message}`);
+    return reply.code(201).send({ id: data.id, url: inviteUrl(config.webUrl, token), expiresAt: data.expires_at });
+  });
+
+  app.get("/api/invites", async (req) => {
+    const { data, error } = await db
+      .from("invites")
+      .select("id, created_at, expires_at, last_used_at")
+      .eq("business_id", req.biz!.id)
+      .is("revoked_at", null)
+      .gt("expires_at", new Date().toISOString())
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(`list invites: ${error.message}`);
+    return {
+      invites: (data ?? []).map((r: { id: string; created_at: string; expires_at: string; last_used_at: string | null }) => ({
+        id: r.id,
+        createdAt: r.created_at,
+        expiresAt: r.expires_at,
+        lastUsedAt: r.last_used_at,
+      })),
+    };
+  });
+
+  app.delete<{ Params: { id: string } }>("/api/invites/:id", async (req, reply) => {
+    if (!UUID.test(req.params.id)) return fail(reply, 404, "not_found");
+    const { data, error } = await db
+      .from("invites")
+      .update({ revoked_at: new Date().toISOString() })
+      .eq("id", req.params.id)
+      .eq("business_id", req.biz!.id)
+      .is("revoked_at", null)
+      .select("id");
+    if (error) throw new Error(`revoke invite: ${error.message}`);
+    if (!data?.length) return fail(reply, 404, "not_found");
+    return { ok: true };
+  });
+
   app.post<{ Body: { platform?: string } }>("/api/connect", async (req, reply) => {
     const platform = String(req.body?.platform ?? "");
-    if (!PLATFORMS.has(platform)) return fail(reply, 400, "bad_platform");
+    if (!isPlatform(platform)) return fail(reply, 400, "bad_platform");
     try {
       const profileId = await ensureProfile(req.biz!);
       const authUrl = await zernio.connectUrl(platform, profileId, `${config.webUrl}/app/accounts?connected=${platform}`);

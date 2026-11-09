@@ -84,9 +84,10 @@ export async function deleteAccount(accountId: string): Promise<void> {
   await call("DELETE", `/accounts/${accountId}`);
 }
 
-export async function connectUrl(platform: string, profileId: string, redirectUrl: string): Promise<string> {
+/** `extra`: more query parameters, e.g. the branded welcome screen (welcome, brandName, logoUrl, primaryColor). */
+export async function connectUrl(platform: string, profileId: string, redirectUrl: string, extra: Query = {}): Promise<string> {
   const r = await call<{ authUrl: string }>("GET", `/connect/${platform}`, {
-    query: { profileId, redirect_url: redirectUrl },
+    query: { ...extra, profileId, redirect_url: redirectUrl },
   });
   return r.authUrl;
 }
