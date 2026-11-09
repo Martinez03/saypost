@@ -170,7 +170,7 @@ export async function apiRoutes(app: FastifyInstance) {
   // Settings: agency branding (and kind) of the selected business's workspace. Owners only.
   app.patch<{ Body: Record<string, unknown> }>("/api/workspace", async (req, reply) => {
     const biz = req.biz;
-    if (!biz) return fail(reply, 404, "no_business");
+    if (!biz) return req.headers["x-business-id"] ? fail(reply, 403, "forbidden_business", "That business is not in your workspace") : fail(reply, 404, "no_business");
     const role = (await userMemberships(req.userId!)).find((m) => m.workspace_id === biz.workspace_id)?.role;
     if (role !== "owner") return fail(reply, 403, "forbidden_workspace", "Only the workspace owner can change this");
     const b = req.body ?? {};
