@@ -16,6 +16,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       email={email}
       pending={count ?? 0}
       agencyMode={agencyMode}
+      timeZone={business.timezone}
     >
       {children}
     </AppShell>

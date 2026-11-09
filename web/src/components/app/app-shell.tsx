@@ -3,8 +3,10 @@
 import { useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Building2, Check, CheckCheck, ChevronsUpDown, Home, Link2, LogOut, Menu, MessageCircle, Newspaper, Plus, Settings, Users, type LucideIcon } from "lucide-react";
+import { Building2, Check, CheckCheck, ChevronsUpDown, Home, Link2, LogOut, Menu, MessageCircle, MessagesSquare, Newspaper, Plus, Settings, Users, type LucideIcon } from "lucide-react";
 import { selectBusiness } from "@/app/app/actions";
+import { ChatLauncher } from "@/components/app/chat/chat-launcher";
+import { ChatProvider } from "@/components/app/chat/chat-provider";
 import { Logo } from "@/components/brand/logo";
 import { useI18n } from "@/components/i18n-provider";
 import { LangToggle } from "@/components/lang-toggle";
@@ -25,10 +27,11 @@ import { cn } from "@/lib/utils";
 // App frame: a sidebar on the grey canvas and the page on a white panel, as wide as the window allows (max 1440 px).
 // On phones the sidebar becomes a sheet behind a menu button.
 
-type NavKey = "home" | "approvals" | "posts" | "accounts" | "whatsapp" | "settings" | "clients";
+type NavKey = "home" | "chat" | "approvals" | "posts" | "accounts" | "whatsapp" | "settings" | "clients";
 
 const NAV: { key: NavKey; href: string; icon: LucideIcon }[] = [
   { key: "home", href: "/app", icon: Home },
+  { key: "chat", href: "/app/chat", icon: MessagesSquare },
   { key: "approvals", href: "/app/approvals", icon: CheckCheck },
   { key: "posts", href: "/app/posts", icon: Newspaper },
   { key: "accounts", href: "/app/accounts", icon: Link2 },
@@ -48,6 +51,8 @@ type ShellProps = {
   businesses: { id: string; name: string }[];
   /** Agency workspace or more than one business: switcher and Clients. */
   agencyMode: boolean;
+  /** The selected business's time zone (chat timestamps). */
+  timeZone: string;
 };
 
 /** Business switcher: only in agency mode (an agency workspace, or more than one business). */
@@ -202,39 +207,45 @@ export function AppShell({ children, ...props }: ShellProps & { children: ReactN
   // Every backend call from this page acts on the business it shows (X-Business-Id).
   setApiBusiness(props.businessId);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const onChatPage = usePathname() === "/app/chat";
 
   return (
-    <div data-app-shell className="flex min-h-svh flex-1 bg-canvas">
-      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2">
-        {t.common.skipToContent}
-      </a>
-      <aside className="sticky top-0 hidden h-svh w-60 shrink-0 flex-col gap-3 overflow-hidden px-2.5 py-3 md:flex">
-        <SidebarBody {...props} />
-      </aside>
+    // The chat (page and floating sheet) belongs to the selected business: a new business, a fresh chat.
+    <ChatProvider key={props.businessId} businessId={props.businessId} businessName={props.businessName} agencyMode={props.agencyMode} timeZone={props.timeZone}>
+      <div data-app-shell className="flex min-h-svh flex-1 bg-canvas">
+        <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2">
+          {t.common.skipToContent}
+        </a>
+        <aside className="sticky top-0 hidden h-svh w-60 shrink-0 flex-col gap-3 overflow-hidden px-2.5 py-3 md:flex">
+          <SidebarBody {...props} />
+        </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col md:py-2 md:pr-2">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/85 px-2.5 backdrop-blur-md md:hidden">
-          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-            <SheetTrigger
-              className="relative flex size-9 items-center justify-center rounded-lg text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label={t.common.openMenu}
-            >
-              <Menu className="size-5" aria-hidden />
-              {props.pending > 0 && <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-primary" aria-hidden />}
-            </SheetTrigger>
-            <SheetContent side="left" className="w-[18rem] gap-3 overflow-hidden bg-canvas px-2.5 py-3">
-              <SheetTitle className="sr-only">{t.common.menu}</SheetTitle>
-              <SidebarBody {...props} onNavigate={() => setSheetOpen(false)} />
-            </SheetContent>
-          </Sheet>
-          <Link href="/app" className="rounded-md">
-            <Logo />
-          </Link>
-        </header>
-        <main id="main" className="flex-1 bg-background md:rounded-xl md:border md:shadow-xs">
-          <div className="mx-auto w-full max-w-[90rem] px-4 pt-6 pb-12 sm:px-6 lg:px-10 lg:pt-9 lg:pb-16">{children}</div>
-        </main>
+        <div className="flex min-w-0 flex-1 flex-col md:py-2 md:pr-2">
+          <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/85 px-2.5 backdrop-blur-md md:hidden">
+            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+              <SheetTrigger
+                className="relative flex size-9 items-center justify-center rounded-lg text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label={t.common.openMenu}
+              >
+                <Menu className="size-5" aria-hidden />
+                {props.pending > 0 && <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-primary" aria-hidden />}
+              </SheetTrigger>
+              <SheetContent side="left" className="w-[18rem] gap-3 overflow-hidden bg-canvas px-2.5 py-3">
+                <SheetTitle className="sr-only">{t.common.menu}</SheetTitle>
+                <SidebarBody {...props} onNavigate={() => setSheetOpen(false)} />
+              </SheetContent>
+            </Sheet>
+            <Link href="/app" className="rounded-md">
+              <Logo />
+            </Link>
+          </header>
+          <main id="main" className="flex-1 bg-background md:rounded-xl md:border md:shadow-xs">
+            {/* Room at the bottom for the floating chat button, except on the Chat page. */}
+            <div className={cn("mx-auto w-full max-w-[90rem] px-4 pt-6 sm:px-6 lg:px-10 lg:pt-9", onChatPage ? "pb-4 lg:pb-8" : "pb-24")}>{children}</div>
+          </main>
+        </div>
+        <ChatLauncher />
       </div>
-    </div>
+    </ChatProvider>
   );
 }

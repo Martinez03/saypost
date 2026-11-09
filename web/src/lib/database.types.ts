@@ -140,6 +140,8 @@ export type Database = {
           body: string;
           media_url: string | null;
           zernio_message_id: string | null;
+          /** Where it came in or was answered: the owner's WhatsApp or the dashboard chat. */
+          channel: "whatsapp" | "web";
           created_at: string;
         };
         Insert: never;
