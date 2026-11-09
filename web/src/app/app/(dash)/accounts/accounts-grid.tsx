@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element -- avatars come from the networks' CDNs */
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Info, Loader2, Plus, RefreshCw, Unlink } from "lucide-react";
 import { toast } from "sonner";
@@ -27,7 +27,7 @@ import { cn } from "@/lib/utils";
 
 type Row = Pick<SocialAccount, "id" | "platform" | "username" | "display_name" | "profile_picture" | "status">;
 
-export function AccountsGrid({ accounts, connected }: { accounts: Row[]; connected: string | null }) {
+export function AccountsGrid({ accounts, connected, invite }: { accounts: Row[]; connected: string | null; invite?: ReactNode }) {
   const { t } = useI18n();
   const a = t.accounts;
   const router = useRouter();
@@ -112,10 +112,13 @@ export function AccountsGrid({ accounts, connected }: { accounts: Row[]; connect
           </>
         }
         actions={
-          <Button variant="outline" onClick={() => void sync()} disabled={busy}>
-            <RefreshCw className={cn(busy && "animate-spin")} aria-hidden />
-            {a.sync}
-          </Button>
+          <>
+            <Button variant="outline" onClick={() => void sync()} disabled={busy}>
+              <RefreshCw className={cn(busy && "animate-spin")} aria-hidden />
+              {a.sync}
+            </Button>
+            {invite}
+          </>
         }
       />
 
@@ -171,7 +174,7 @@ export function AccountsGrid({ accounts, connected }: { accounts: Row[]; connect
               )}
 
               <Button
-                variant={live.length ? "outline" : "default"}
+                variant={live.length || invite ? "outline" : "default"}
                 className="mt-auto w-full"
                 onClick={() => void connect(p.id)}
                 disabled={connecting !== null}

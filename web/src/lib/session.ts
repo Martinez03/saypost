@@ -42,3 +42,27 @@ export async function requireBusiness() {
   if (!business) redirect("/app/onboarding");
   return business;
 }
+
+/** The user's workspaces with their role in each (RLS: only theirs). */
+export const getWorkspaces = cache(async () => {
+  const { supabase, userId } = await getSession();
+  const [ws, members] = await Promise.all([
+    supabase.from("workspaces").select("*").order("created_at"),
+    supabase.from("workspace_members").select("workspace_id, role").eq("user_id", userId),
+  ]);
+  if (ws.error) throw new Error(ws.error.message);
+  const roles = new Map((members.data ?? []).map((m) => [m.workspace_id, m.role]));
+  return (ws.data ?? []).map((w) => ({ ...w, role: roles.get(w.id) ?? "member" }));
+});
+
+/**
+ * The workspace of the selected business (or the user's first one before they have a business), and
+ * whether the dashboard should look like an agency's: an agency workspace, or more than one business.
+ */
+export const getWorkspaceContext = cache(async () => {
+  const [business, businesses, workspaces] = await Promise.all([getBusiness(), getBusinesses(), getWorkspaces()]);
+  const workspace = (business && workspaces.find((w) => w.id === business.workspace_id)) ?? workspaces[0] ?? null;
+  // The name clients see: the agency's brand, else an agency workspace's own name.
+  const agencyName = workspace?.brand_name ?? (workspace?.kind === "agency" ? workspace.name : null);
+  return { workspace, agencyMode: workspace?.kind === "agency" || businesses.length > 1, agencyName, isOwner: workspace?.role === "owner" };
+});

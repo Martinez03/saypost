@@ -1,4 +1,4 @@
-// Hand-written from supabase/migrations/ (init + workspaces) (only the tables the web reads or writes).
+// Hand-written from supabase/migrations/ (init, workspaces, invites) (only the tables the web reads or writes).
 // Insert/Update list only the columns the `authenticated` role is granted, so a forbidden write fails to compile.
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
@@ -10,6 +10,8 @@ export type ApprovalMode = "owner_whatsapp" | "agency_dashboard";
 export type ActionKind = "publish" | "reply_review" | "reply_comment" | "reply_dm" | "cancel_post" | "boost";
 export type ActionStatus = "pending" | "approved" | "rejected" | "done" | "failed" | "superseded";
 export type MessageKind = "text" | "audio" | "image" | "video" | "system";
+export type WorkspaceKind = "business" | "agency";
+export type WorkspaceRole = "owner" | "member";
 
 export type Database = {
   public: {
@@ -66,6 +68,50 @@ export type Database = {
           notify_dms?: boolean;
           approval_mode?: ApprovalMode;
         };
+        Relationships: [];
+      };
+      workspaces: {
+        Row: {
+          id: string;
+          name: string;
+          kind: WorkspaceKind;
+          brand_name: string | null;
+          logo_url: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: never;
+        // Owners only (RLS). The dashboard goes through PATCH /api/workspace, which also validates.
+        Update: {
+          brand_name?: string | null;
+          logo_url?: string | null;
+        };
+        Relationships: [];
+      };
+      workspace_members: {
+        Row: {
+          workspace_id: string;
+          user_id: string;
+          role: WorkspaceRole;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      invites: {
+        // token_hash is not granted to the web.
+        Row: {
+          id: string;
+          business_id: string;
+          created_by: string | null;
+          expires_at: string;
+          revoked_at: string | null;
+          created_at: string;
+          last_used_at: string | null;
+        };
+        Insert: never;
+        Update: never;
         Relationships: [];
       };
       social_accounts: {
@@ -145,6 +191,7 @@ export type Database = {
 
 type Tables = Database["public"]["Tables"];
 export type Business = Tables["businesses"]["Row"];
+export type Workspace = Tables["workspaces"]["Row"];
 export type SocialAccount = Tables["social_accounts"]["Row"];
 export type Message = Tables["messages"]["Row"];
 export type Action = Tables["actions"]["Row"];

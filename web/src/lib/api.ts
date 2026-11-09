@@ -16,7 +16,7 @@ export class ApiError extends Error {
   }
 }
 
-type Method = "GET" | "POST" | "DELETE";
+type Method = "GET" | "POST" | "PATCH" | "DELETE";
 
 // The business the dashboard is showing. The app shell sets it on render, so every call acts on
 // the same business as the page (the backend checks it belongs to the user's workspaces).
@@ -26,19 +26,32 @@ export function setApiBusiness(id: string | null) {
   currentBusinessId = id;
 }
 
-export async function api<T>(path: string, options: { method?: Method; body?: unknown; timeoutMs?: number } = {}): Promise<T> {
-  const { body, timeoutMs = 30_000 } = options;
-  const method = options.method ?? (body === undefined ? "GET" : "POST");
+type Options = { method?: Method; body?: unknown; timeoutMs?: number; /** Acts on this business instead of the page's. */ businessId?: string };
+
+export async function api<T>(path: string, options: Options = {}): Promise<T> {
   const { data } = await createClient().auth.getSession();
   const token = data.session?.access_token;
+  const businessId = options.businessId ?? currentBusinessId;
+  return request<T>(path, options, {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(businessId ? { "X-Business-Id": businessId } : {}),
+  });
+}
 
+/** The public, token-gated endpoints of the client invite page: no session, no business header. */
+export function publicApi<T>(path: string, body?: unknown): Promise<T> {
+  return request<T>(path, { body }, {});
+}
+
+async function request<T>(path: string, options: Options, auth: Record<string, string>): Promise<T> {
+  const { body, timeoutMs = 30_000 } = options;
+  const method = options.method ?? (body === undefined ? "GET" : "POST");
   let res: Response;
   try {
     res = await fetch(`${API_URL}${path}`, {
       method,
       headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(currentBusinessId ? { "X-Business-Id": currentBusinessId } : {}),
+        ...auth,
         // No Content-Type without a body: Fastify rejects an empty JSON body.
         ...(body === undefined ? {} : { "Content-Type": "application/json" }),
       },
@@ -55,9 +68,10 @@ export async function api<T>(path: string, options: { method?: Method; body?: un
   return json as T;
 }
 
-export const apiGet = <T>(path: string) => api<T>(path);
-export const apiPost = <T>(path: string, body?: unknown) => api<T>(path, { method: "POST", body });
-export const apiDelete = <T>(path: string) => api<T>(path, { method: "DELETE" });
+export const apiGet = <T>(path: string, businessId?: string) => api<T>(path, { businessId });
+export const apiPost = <T>(path: string, body?: unknown, businessId?: string) => api<T>(path, { method: "POST", body, businessId });
+export const apiPatch = <T>(path: string, body: unknown) => api<T>(path, { method: "PATCH", body });
+export const apiDelete = <T>(path: string, businessId?: string) => api<T>(path, { method: "DELETE", businessId });
 
 // ---------------------------------------------------------------------------
 // Response types (docs/API.md)
@@ -99,4 +113,18 @@ export type Post = {
   publishedAt: string | null;
   platforms: PostPlatform[] | null;
   mediaUrl: string | null;
+};
+
+export type InviteCreated = { id: string; url: string; expiresAt: string };
+export type InviteSummary = { id: string; createdAt: string; expiresAt: string; lastUsedAt: string | null };
+
+export type WorkspaceResponse = { workspace: { id: string; name: string; kind: "business" | "agency"; brandName: string | null; logoUrl: string | null } };
+
+/** GET /public/invites/:token (docs/API.md). */
+export type PublicInvite = {
+  businessName: string;
+  brandName: string | null;
+  logoUrl: string | null;
+  language: "es" | "en";
+  platforms: { platform: string; connected: boolean; username: string | null }[];
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -17,7 +17,7 @@ import { createClient } from "@/lib/supabase/client";
 type Values = BusinessValues & { notes: string; notify_reviews: boolean; notify_comments: boolean; notify_dms: boolean; approval_mode: ApprovalMode };
 
 /** Edits the business through RLS: only the columns the web is granted (profile, notes, notify_*, approval_mode). */
-export function SettingsForm({ id, email, initial }: { id: string; email: string | null; initial: Values }) {
+export function SettingsForm({ id, email, initial, branding }: { id: string; email: string | null; initial: Values; branding?: ReactNode }) {
   const { t } = useI18n();
   const s = t.settings;
   const router = useRouter();
@@ -128,6 +128,8 @@ export function SettingsForm({ id, email, initial }: { id: string; email: string
         <SectionTitle id="approval-title" title={t.agency.approvalTitle} description={t.agency.approvalSubtitle} />
         <ApprovalModeField value={values.approval_mode} onChange={(approval_mode) => patch({ approval_mode })} />
       </section>
+
+      {branding}
 
       {email && (
         <p className="text-sm text-muted-foreground">

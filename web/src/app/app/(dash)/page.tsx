@@ -12,14 +12,17 @@ import {
   Send,
   Smartphone,
   Star,
+  UserPlus,
   type LucideIcon,
 } from "lucide-react";
+import type { ReactNode } from "react";
 import { EmptyState } from "@/components/app/empty-state";
+import { InviteClient } from "@/components/app/invite-client";
 import { PageHeader, SectionTitle } from "@/components/app/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { getI18n } from "@/i18n/server";
 import { dateTime, relativeTime } from "@/lib/format";
-import { getSession, requireBusiness } from "@/lib/session";
+import { getSession, getWorkspaceContext, requireBusiness } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { StatsCards } from "./stats-cards";
 
@@ -36,13 +39,14 @@ function eventIcon(type: string): { icon: LucideIcon; tone: string } {
   if (type.startsWith("dm.") || type.startsWith("message.")) return { icon: MessageCircle, tone: "text-sky-500" };
   if (type.endsWith(".failed") || type.includes("error")) return { icon: AlertTriangle, tone: "text-destructive" };
   if (type.startsWith("action.")) return { icon: CheckCircle2, tone: "text-positive" };
+  if (type.startsWith("invite.")) return { icon: UserPlus, tone: "text-positive" };
   if (type.startsWith("account.")) return { icon: Link2, tone: "text-muted-foreground" };
   if (type.startsWith("whatsapp.")) return { icon: Smartphone, tone: "text-positive" };
   return { icon: Activity, tone: "text-muted-foreground" };
 }
 
 export default async function HomePage() {
-  const [business, { supabase }, { t, lang }] = await Promise.all([requireBusiness(), getSession(), getI18n()]);
+  const [business, { supabase }, { t, lang }, ctx] = await Promise.all([requireBusiness(), getSession(), getI18n(), getWorkspaceContext()]);
   const [accounts, inbound, events] = await Promise.all([
     supabase.from("social_accounts").select("id", { count: "exact", head: true }).eq("business_id", business.id).eq("status", "connected"),
     supabase.from("messages").select("id", { count: "exact", head: true }).eq("business_id", business.id).eq("direction", "in"),
@@ -50,11 +54,38 @@ export default async function HomePage() {
   ]);
 
   const h = t.home;
-  const steps = [
-    { key: "connect", done: (accounts.count ?? 0) > 0, href: "/app/accounts", icon: Link2, ...h.steps.connect },
-    { key: "whatsapp", done: business.whatsapp_status === "active", href: "/app/whatsapp", icon: Smartphone, ...h.steps.whatsapp },
-    { key: "voice", done: (inbound.count ?? 0) > 0, href: "/app/whatsapp", icon: Mic, ...h.steps.voice },
-  ];
+  // Agencies: the client connects their own networks from an invite link, and the steps talk about them.
+  const ag = t.agencyHome;
+  const steps: { key: string; done: boolean; href: string; icon: LucideIcon; title: string; text: string; cta: string; action?: ReactNode }[] = ctx.agencyMode
+    ? [
+        {
+          key: "invite",
+          done: (accounts.count ?? 0) > 0,
+          href: "/app/accounts",
+          icon: UserPlus,
+          ...ag.invite,
+          action: (
+            <InviteClient
+              businessId={business.id}
+              businessName={business.name}
+              ownerPhone={business.owner_phone}
+              language={business.language}
+              agencyName={ctx.agencyName}
+              size="sm"
+              variant="default"
+              className="mt-1 w-fit"
+              label={ag.invite.cta}
+            />
+          ),
+        },
+        { key: "whatsapp", done: business.whatsapp_status === "active", href: "/app/whatsapp", icon: Smartphone, ...ag.whatsapp },
+        { key: "voice", done: (inbound.count ?? 0) > 0, href: "/app/whatsapp", icon: Mic, ...ag.voice },
+      ]
+    : [
+        { key: "connect", done: (accounts.count ?? 0) > 0, href: "/app/accounts", icon: Link2, ...h.steps.connect },
+        { key: "whatsapp", done: business.whatsapp_status === "active", href: "/app/whatsapp", icon: Smartphone, ...h.steps.whatsapp },
+        { key: "voice", done: (inbound.count ?? 0) > 0, href: "/app/whatsapp", icon: Mic, ...h.steps.voice },
+      ];
   const doneCount = steps.filter((s) => s.done).length;
   const nextStep = steps.find((s) => !s.done)?.key;
   // eslint-disable-next-line react-hooks/purity -- rendered per request
@@ -94,7 +125,8 @@ export default async function HomePage() {
                     {s.done && <span className="sr-only"> ({h.done})</span>}
                   </p>
                   <p className="text-xs text-muted-foreground">{s.text}</p>
-                  {!s.done && (
+                  {!s.done && s.action}
+                  {!s.done && !s.action && (
                     <Link
                       href={s.href}
                       className={cn(buttonVariants({ variant: s.key === nextStep ? "default" : "outline", size: "sm" }), "mt-1 w-fit")}

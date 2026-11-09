@@ -2,7 +2,8 @@
  * Hallmark stamp. Direction: "paper and ink, one green". Warm paper, near-black ink, Saypost green only
  * where something gets approved or goes live. Display face Familjen Grotesk, body Inter, mono for code.
  * Illustrations are drawn in one hand: 1.5px round ink lines, flat paper and well fills, green for the "yes".
- * Scoped to the landing (.landing) so the dashboard keeps its own surfaces.
+ * Scoped to the landing (.landing) so the dashboard keeps its own surfaces; .ill-vars brings only the
+ * illustration palette to other pages (onboarding, the client invite page).
  */
 
 /* Paper instead of pure white on the landing, light theme only (dark already sits on a tinted near-black). */
@@ -19,7 +20,8 @@ html:has(.landing) body {
   overflow-x: clip;
 }
 
-.landing {
+.landing,
+.ill-vars {
   /* Illustration palette: every stroke and fill comes from these. */
   --ill-ink: color-mix(in oklab, var(--foreground) 88%, var(--background));
   --ill-paper: var(--card);
@@ -44,7 +46,8 @@ html:has(.landing) body {
   --code-key: oklch(0.83 0.08 75);
   --code-edge: color-mix(in oklab, var(--code-ink) 12%, var(--code-bg));
 }
-.dark .landing {
+.dark .landing,
+.dark .ill-vars {
   --ill-ink: color-mix(in oklab, var(--foreground) 82%, var(--background));
   --ill-well: color-mix(in oklab, var(--foreground) 8%, var(--background));
   --ill-accent-soft: color-mix(in oklab, var(--brand-bright) 26%, var(--background));

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getI18n } from "@/i18n/server";
-import { getSession, requireBusiness } from "@/lib/session";
+import { getSession, getWorkspaceContext, requireBusiness } from "@/lib/session";
+import { AgencyBrandSection } from "./agency-brand-section";
 import { SettingsForm } from "./settings-form";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -9,11 +10,20 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function SettingsPage() {
-  const [business, { email }] = await Promise.all([requireBusiness(), getSession()]);
+  const [business, { email }, ctx] = await Promise.all([requireBusiness(), getSession(), getWorkspaceContext()]);
   return (
     <SettingsForm
       id={business.id}
       email={email}
+      branding={
+        ctx.agencyMode && ctx.workspace ? (
+          <AgencyBrandSection
+            key={ctx.workspace.id}
+            canEdit={ctx.isOwner}
+            initial={{ brandName: ctx.workspace.brand_name ?? "", logoUrl: ctx.workspace.logo_url ?? "" }}
+          />
+        ) : null
+      }
       initial={{
         name: business.name,
         category: business.category ?? "",

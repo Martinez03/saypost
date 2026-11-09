@@ -40,9 +40,17 @@ const navRowClass =
   "relative flex h-9 w-full items-center gap-2.5 overflow-hidden rounded-lg px-3 text-left text-[0.8125rem] font-medium text-sidebar-foreground transition-colors outline-none hover:bg-foreground/[0.045] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-white/[0.06]";
 const activeClass = "bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground dark:hover:bg-sidebar-accent";
 
-type ShellProps = { businessName: string; email: string | null; pending: number; businessId: string; businesses: { id: string; name: string }[] };
+type ShellProps = {
+  businessName: string;
+  email: string | null;
+  pending: number;
+  businessId: string;
+  businesses: { id: string; name: string }[];
+  /** Agency workspace or more than one business: switcher and Clients. */
+  agencyMode: boolean;
+};
 
-/** Business switcher: only when the user has more than one business (an agency). */
+/** Business switcher: only in agency mode (an agency workspace, or more than one business). */
 function BusinessSwitcher({ businessId, businessName, businesses, onNavigate }: Pick<ShellProps, "businessId" | "businessName" | "businesses"> & { onNavigate?: () => void }) {
   const { t } = useI18n();
   const g = t.agency;
@@ -101,13 +109,13 @@ function BusinessSwitcher({ businessId, businessName, businesses, onNavigate }: 
   );
 }
 
-function SidebarBody({ businessName, email, pending, businessId, businesses, onNavigate }: ShellProps & { onNavigate?: () => void }) {
+function SidebarBody({ businessName, email, pending, businessId, businesses, agencyMode, onNavigate }: ShellProps & { onNavigate?: () => void }) {
   const { t } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
   const signOutForm = `signout-${onNavigate ? "sheet" : "side"}`;
   const initial = (email ?? businessName ?? "?").slice(0, 1).toUpperCase();
-  const agency = businesses.length > 1;
+  const agency = agencyMode;
   const nav = agency ? [...NAV.slice(0, 1), { key: "clients" as const, href: "/app/clients", icon: Users }, ...NAV.slice(1)] : NAV;
 
   return (

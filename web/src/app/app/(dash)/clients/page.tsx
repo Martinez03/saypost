@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { getI18n } from "@/i18n/server";
 import { isCategory } from "@/lib/business";
-import { getBusinesses, getSession, requireBusiness } from "@/lib/session";
+import { InviteClient } from "@/components/app/invite-client";
+import { getBusinesses, getSession, getWorkspaceContext, requireBusiness } from "@/lib/session";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -16,7 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /** Every business in the user's workspaces with a short summary, and a way to switch to it. */
 export default async function ClientsPage() {
-  const [current, all, { supabase }, { t }] = await Promise.all([requireBusiness(), getBusinesses(), getSession(), getI18n()]);
+  const [current, all, { supabase }, { t }, ctx] = await Promise.all([requireBusiness(), getBusinesses(), getSession(), getI18n(), getWorkspaceContext()]);
   const ids = all.map((b) => b.id);
   const [accounts, pending] = await Promise.all([
     supabase.from("social_accounts").select("business_id").eq("status", "connected").in("business_id", ids),
@@ -54,7 +55,16 @@ export default async function ClientsPage() {
                 {p > 0 && <Badge variant="warning">{g.pending(p)}</Badge>}
                 {b.approval_mode === "agency_dashboard" && <Badge variant="outline">{g.agencyBadge}</Badge>}
               </div>
-              <div className="flex justify-end">
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <InviteClient
+                  businessId={b.id}
+                  businessName={b.name}
+                  ownerPhone={b.owner_phone}
+                  language={b.language}
+                  agencyName={ctx.agencyName}
+                  size="sm"
+                  className="mr-auto"
+                />
                 {here ? (
                   <Badge variant="default">{g.working}</Badge>
                 ) : (
