@@ -1,9 +1,10 @@
 // Messages from the business owner to Saypost on WhatsApp.
 import { approveAction, rejectAction } from "./actions.js";
-import { ownerCanDecideOnWhatsapp } from "./approval.js";
-import { runAgent } from "./agent/agent.js";
+import { decidableOnWhatsapp, ownerCanDecideOnWhatsapp } from "./approval.js";
+import { deliverAgentOutput, runAgent } from "./agent/agent.js";
 import { addEvent, addMessage, getAction, getBusiness, getBusinessByPhone, pendingActions, updateBusiness, type Business } from "./db.js";
 import { t } from "./i18n.js";
+import { enqueue } from "./queue.js";
 import { transcribe } from "./transcribe.js";
 import { sendToOwner } from "./whatsapp.js";
 import * as zernio from "./zernio.js";
@@ -27,19 +28,10 @@ export interface InboxMessageEvent {
 export const YES = /^\s*(s[ií]+|sip|vale|ok(ay)?|dale|venga|adelante|publ[ií]ca(lo)?|perfecto|genial|correcto|yes|yep|sure|go( ahead)?|post it|do it)\s*[.!👍✅🙌]*\s*$/i;
 export const NO = /^\s*(no|nop|nope|cancela(lo)?|desc[aá]rtalo|mejor no|no gracias|cancel|don'?t)\s*[.!❌👎]*\s*$/i;
 
-// Per-business serialisation + a short debounce so "photo + audio" sent back to back become one turn.
-const queues = new Map<string, Promise<void>>();
+// Per-business serialisation (queue.ts, shared with the web chat) + a short debounce so "photo + audio"
+// sent back to back become one turn.
 const timers = new Map<string, NodeJS.Timeout>();
 const DEBOUNCE_MS = 3500;
-
-function enqueue(businessId: string, job: () => Promise<void>) {
-  const prev = queues.get(businessId) ?? Promise.resolve();
-  const next = prev.then(job).catch((e) => console.error(`[inbound] job failed for ${businessId}:`, e));
-  queues.set(businessId, next);
-  void next.finally(() => {
-    if (queues.get(businessId) === next) queues.delete(businessId);
-  });
-}
 
 function scheduleAgent(businessId: string) {
   const old = timers.get(businessId);
@@ -48,12 +40,12 @@ function scheduleAgent(businessId: string) {
     businessId,
     setTimeout(() => {
       timers.delete(businessId);
-      enqueue(businessId, async () => {
+      void enqueue(businessId, async () => {
         const biz = await getBusiness(businessId);
         if (!biz) return;
         if (biz.whatsapp_conversation_id && biz.whatsapp_account_id) void zernio.typing(biz.whatsapp_conversation_id, biz.whatsapp_account_id);
         try {
-          await runAgent(biz);
+          await deliverAgentOutput(biz, "whatsapp", await runAgent(biz, "whatsapp"));
         } catch (e) {
           console.error("[agent] failed:", e);
           await addEvent(biz.id, "agent.error", t(biz.language).evAgentError, { error: String(e).slice(0, 300) });
@@ -87,7 +79,7 @@ export async function handleOwnerMessage(ev: InboxMessageEvent): Promise<void> {
   Object.assign(biz, patch);
   void zernio.markRead(ev.conversation.id, ev.account.id);
 
-  enqueue(biz.id, () => processOwnerMessage(biz, ev, firstContact));
+  void enqueue(biz.id, () => processOwnerMessage(biz, ev, firstContact));
 }
 
 async function processOwnerMessage(biz: Business, ev: InboxMessageEvent, firstContact: boolean): Promise<void> {
@@ -138,9 +130,9 @@ async function processOwnerMessage(biz: Business, ev: InboxMessageEvent, firstCo
     if (/^\s*(hola|hello|hi|hey|buenas)\b/i.test(body) && body.length < 25) return;
   }
 
-  // 3. A plain "yes"/"no" answers the latest proposal.
+  // 3. A plain "yes"/"no" answers the latest proposal the owner got on WhatsApp (never a web chat one).
   if (kind === "text" && (YES.test(body) || NO.test(body))) {
-    const pending = await pendingActions(biz.id);
+    const pending = (await pendingActions(biz.id)).filter(decidableOnWhatsapp);
     if (pending.length && !ownerCanDecideOnWhatsapp(biz.approval_mode)) {
       await sendToOwner(biz, s.agencyDecides);
       return;
@@ -163,7 +155,7 @@ async function decide(biz: Business, actionId: string, approve: boolean) {
     return;
   }
   const action = await getAction(actionId);
-  if (!action || action.business_id !== biz.id) {
+  if (!action || action.business_id !== biz.id || !decidableOnWhatsapp(action)) {
     await sendToOwner(biz, s.alreadyDecided);
     return;
   }

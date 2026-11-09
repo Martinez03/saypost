@@ -84,7 +84,7 @@ test("the webhook setup script subscribes to exactly the events dispatch() handl
 
 test("approval mode routing: owner_whatsapp keeps buttons; agency_dashboard never lets WhatsApp decide", async () => {
   const { proposalDelivery, ownerCanDecideOnWhatsapp, ownerGetsResult } = await import("../src/approval.js");
-  for (const source of ["whatsapp", "webhook", "dashboard"] as const) {
+  for (const source of ["whatsapp", "webhook"] as const) {
     assert.equal(proposalDelivery("owner_whatsapp", source), "buttons", source);
     assert.equal(ownerGetsResult("owner_whatsapp", source), true, source);
   }

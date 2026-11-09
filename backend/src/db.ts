@@ -80,6 +80,9 @@ export interface ActionRow {
   executed_at: string | null;
 }
 
+/** Where a message of the owner's conversation came in, or was answered: their WhatsApp or the dashboard chat. */
+export type Channel = "whatsapp" | "web";
+
 export interface MessageRow {
   id: number;
   business_id: string;
@@ -87,6 +90,8 @@ export interface MessageRow {
   kind: "text" | "audio" | "image" | "video" | "system";
   body: string;
   media_url: string | null;
+  /** Older rows (before the web chat) have no channel: they are WhatsApp. */
+  channel?: Channel;
   created_at: string;
 }
 
@@ -155,7 +160,9 @@ export async function upsertAccount(row: Omit<SocialAccount, "id">): Promise<voi
   check(await db.from("social_accounts").upsert(row, { onConflict: "zernio_account_id" }), "upsertAccount");
 }
 
-export async function addMessage(m: Omit<MessageRow, "id" | "created_at" | "media_url"> & { media_url?: string | null; zernio_message_id?: string | null }): Promise<void> {
+export async function addMessage(
+  m: Omit<MessageRow, "id" | "created_at" | "media_url" | "channel"> & { media_url?: string | null; zernio_message_id?: string | null; channel?: Channel },
+): Promise<void> {
   check(await db.from("messages").insert(m), "addMessage");
 }
 

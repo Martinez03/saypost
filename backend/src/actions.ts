@@ -1,7 +1,7 @@
 // Pending actions: everything that publishes, replies or deletes is stored here first and only runs
 // after the owner's "yes" (WhatsApp button/text) or an approval in the dashboard. Enforced in code.
 import { ownerGetsResult, proposalDelivery } from "./approval.js";
-import { addEvent, db, getAction, getBusiness, listAccounts, type ActionKind, type ActionRow, type Business } from "./db.js";
+import { addEvent, addMessage, db, getAction, getBusiness, listAccounts, type ActionKind, type ActionRow, type Business } from "./db.js";
 import { platformName, t } from "./i18n.js";
 import { sendToOwner } from "./whatsapp.js";
 import * as zernio from "./zernio.js";
@@ -100,7 +100,11 @@ export async function rejectAction(id: string, via: "whatsapp" | "dashboard"): P
   const row = await claim(id, "rejected", via);
   if (row) {
     const biz = await getBusiness(row.business_id);
-    await addEvent(row.business_id, "action.rejected", t(biz?.language ?? "es").evRejected(row.title), { actionId: row.id, kind: row.kind });
+    const note = t(biz?.language ?? "es").evRejected(row.title);
+    await addEvent(row.business_id, "action.rejected", note, { actionId: row.id, kind: row.kind });
+    // A web chat proposal discarded on its card: leave it in the thread (a "system" line the chat doesn't show),
+    // so the agent knows and doesn't propose it again on the next turn, from either channel.
+    if (row.source === "dashboard") await addMessage({ business_id: row.business_id, direction: "out", kind: "system", body: note, channel: "web" });
   }
   return row;
 }
@@ -123,16 +127,25 @@ export async function approveAction(id: string, via: "whatsapp" | "dashboard"): 
       .select()
       .single();
     await addEvent(biz.id, `action.done`, row.title, { actionId: row.id, kind: row.kind, ...result });
-    if (ownerGetsResult(biz.approval_mode, row.source)) await sendToOwner(biz, summary);
+    await reportResult(biz, row, summary);
     return { row: data as ActionRow, message: summary };
   } catch (e) {
     const why = e instanceof Error ? e.message : String(e);
     console.error(`[action] ${row.kind} ${row.id} failed: ${why}`);
     const { data } = await db.from("actions").update({ status: "failed", error: why.slice(0, 1000) }).eq("id", row.id).select().single();
     await addEvent(biz.id, "action.failed", row.title, { actionId: row.id, kind: row.kind, error: why.slice(0, 300) });
-    if (ownerGetsResult(biz.approval_mode, row.source)) await sendToOwner(biz, s.failed(humanError(why)));
+    await reportResult(biz, row, s.failed(humanError(why)));
     return { row: data as ActionRow, message: why };
   }
+}
+
+/**
+ * The outcome ("✅ Posted…", "⚠️ I couldn't…") goes where the proposal was made: a web chat proposal gets it
+ * in the web thread (never on WhatsApp); the rest go to the owner's WhatsApp when approval.ts says so.
+ */
+async function reportResult(biz: Business, row: ActionRow, text: string): Promise<void> {
+  if (row.source === "dashboard") await addMessage({ business_id: biz.id, direction: "out", kind: "text", body: text, channel: "web" });
+  else if (ownerGetsResult(biz.approval_mode, row.source)) await sendToOwner(biz, text);
 }
 
 function humanError(why: string): string {

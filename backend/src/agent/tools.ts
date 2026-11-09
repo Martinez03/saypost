@@ -1,8 +1,8 @@
 // Agent tools. Read tools run immediately; propose_* / revise_reply only create pending actions.
 import type Anthropic from "@anthropic-ai/sdk";
-import { proposalDelivery } from "../approval.js";
+import { proposalDelivery, proposalSource } from "../approval.js";
 import { createAction, type PublishPayload, type ReplyCommentPayload, type ReplyReviewPayload } from "../actions.js";
-import { getAction, listAccounts, updateBusiness, type ActionRow, type Business } from "../db.js";
+import { getAction, listAccounts, updateBusiness, type ActionRow, type Business, type Channel } from "../db.js";
 import { platformName, stars } from "../i18n.js";
 import * as zernio from "../zernio.js";
 
@@ -11,7 +11,8 @@ type Tool = Anthropic.Beta.BetaTool;
 const str = (description: string) => ({ type: "string", description });
 
 /** What the model is told after proposing, so it does not ask a client to confirm in agency mode. */
-function whoApproves(biz: Business): string {
+function whoApproves(biz: Business, channel: Channel): string {
+  if (channel === "web") return "the user now sees the preview as a card with Approve / Discard buttons in the web chat.";
   return proposalDelivery(biz.approval_mode, "whatsapp") === "buttons"
     ? "the owner now sees the preview with Yes/No buttons."
     : "their agency reviews it in the dashboard and the system already told the owner so. Do not ask the owner to confirm.";
@@ -139,7 +140,12 @@ function ensureProfile(biz: Business): string {
   return biz.zernio_profile_id;
 }
 
-export async function runTool(biz: Business, name: string, input: Record<string, unknown>): Promise<ToolRun> {
+/**
+ * Runs one tool call. `channel` is where the message being answered came from: proposals made from the web
+ * chat get source "dashboard", so they are never sent to (or decided on) WhatsApp.
+ */
+export async function runTool(biz: Business, name: string, input: Record<string, unknown>, channel: Channel = "whatsapp"): Promise<ToolRun> {
+  const source = proposalSource(channel);
   switch (name) {
     case "propose_post": {
       const accounts = await listAccounts(biz.id);
@@ -165,10 +171,10 @@ export async function runTool(biz: Business, name: string, input: Record<string,
         preview,
         payload,
         context: mediaUrls.length ? { mediaUrls } : null,
-        source: "whatsapp",
+        source,
         supersede: (p) => p.kind === "publish",
       });
-      return { content: `Proposal ${action.id} created; ${whoApproves(biz)} Reply with one short line only.`, created: [action] };
+      return { content: `Proposal ${action.id} created; ${whoApproves(biz, channel)} Reply with one short line only.`, created: [action] };
     }
     case "propose_review_reply": {
       const profileId = ensureProfile(biz);
@@ -182,10 +188,10 @@ export async function runTool(biz: Business, name: string, input: Record<string,
         preview: payload.message,
         payload,
         context: { platform: review.platform, author: review.reviewer?.name, rating: review.rating ?? null, text: review.text ?? "", url: review.reviewUrl ?? null },
-        source: "whatsapp",
+        source,
         supersede: (p) => p.kind === "reply_review" && (p.payload as { reviewId?: string }).reviewId === review.id,
       });
-      return { content: `Proposal ${action.id} created; ${whoApproves(biz)}`, created: [action] };
+      return { content: `Proposal ${action.id} created; ${whoApproves(biz, channel)}`, created: [action] };
     }
     case "revise_reply": {
       const old = await getAction(String(input.action_id));
@@ -199,10 +205,10 @@ export async function runTool(biz: Business, name: string, input: Record<string,
         preview: String(input.reply),
         payload,
         context: old.context,
-        source: "whatsapp",
+        source,
         supersede: (p) => p.id === old.id,
       });
-      return { content: `Revised proposal ${action.id} created; ${whoApproves(biz)}`, created: [action] };
+      return { content: `Revised proposal ${action.id} created; ${whoApproves(biz, channel)}`, created: [action] };
     }
     case "propose_cancel_post": {
       const postId = String(input.post_id);
@@ -211,7 +217,7 @@ export async function runTool(biz: Business, name: string, input: Record<string,
         title: `${biz.language === "en" ? "Cancel" : "Cancelar"}: ${String(input.summary)}`,
         preview: String(input.summary),
         payload: { postId },
-        source: "whatsapp",
+        source,
         supersede: (p) => p.kind === "cancel_post" && (p.payload as { postId?: string }).postId === postId,
       });
       return { content: `Proposal ${action.id} created.`, created: [action] };

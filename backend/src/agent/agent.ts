@@ -1,13 +1,21 @@
-// The WhatsApp agent: builds the conversation from the stored messages, runs Claude with the tools,
-// sends its reply and the previews of any proposals it created.
+// The agent: builds the conversation from the stored messages (WhatsApp and web chat, one thread per
+// business), runs Claude with the tools and returns its reply and the proposals it created. It sends
+// nothing: the caller decides where the answer goes (deliverAgentOutput, by the channel it answers).
 import type Anthropic from "@anthropic-ai/sdk";
 import { deliverProposals } from "../actions.js";
-import { listAccounts, pendingActions, recentMessages, type ActionRow, type Business, type MessageRow } from "../db.js";
+import { addMessage, listAccounts, pendingActions, recentMessages, type ActionRow, type Business, type Channel, type MessageRow } from "../db.js";
 import { t } from "../i18n.js";
 import { claude, textOf } from "../llm.js";
 import { sendToOwner } from "../whatsapp.js";
 import { businessContext, SYSTEM_PROMPT } from "./prompt.js";
 import { runTool, TOOLS } from "./tools.js";
+
+export interface AgentOutput {
+  /** The agent's text answer ("" when it has nothing to add). */
+  reply: string;
+  /** Pending actions created in this turn and still live (not replaced later in the same turn), oldest first. */
+  proposals: ActionRow[];
+}
 
 type Msg = Anthropic.Beta.BetaMessageParam;
 type Block = Anthropic.Beta.BetaContentBlockParam;
@@ -47,15 +55,16 @@ export function buildMessages(rows: MessageRow[]): Msg[] {
   return out;
 }
 
-export async function runAgent(biz: Business): Promise<void> {
+/** Answers the latest message of the business's thread, which came in on `channel`. Sends nothing. */
+export async function runAgent(biz: Business, channel: Channel): Promise<AgentOutput> {
   const s = t(biz.language);
   const [rows, accounts, pending] = await Promise.all([recentMessages(biz.id, 20), listAccounts(biz.id), pendingActions(biz.id)]);
   const messages = buildMessages(rows);
-  if (!messages.length) return;
+  if (!messages.length) return { reply: "", proposals: [] };
 
   const system: Anthropic.Beta.BetaTextBlockParam[] = [
     { type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
-    { type: "text", text: businessContext(biz, accounts, pending, new Date()) },
+    { type: "text", text: businessContext(biz, accounts, pending, new Date(), channel) },
   ];
   const created: ActionRow[] = [];
   let reply = "";
@@ -83,7 +92,7 @@ export async function runAgent(biz: Business): Promise<void> {
     const results: Anthropic.Beta.BetaToolResultBlockParam[] = [];
     for (const u of uses) {
       try {
-        const r = await runTool(biz, u.name, (u.input ?? {}) as Record<string, unknown>);
+        const r = await runTool(biz, u.name, (u.input ?? {}) as Record<string, unknown>, channel);
         if (r.created) created.push(...r.created);
         results.push({ type: "tool_result", tool_use_id: u.id, content: r.content, is_error: r.isError });
       } catch (e) {
@@ -93,9 +102,30 @@ export async function runAgent(biz: Business): Promise<void> {
     messages.push({ role: "user", content: results });
   }
 
-  // Proposals replaced later in the same turn are already "superseded": only send the live ones.
-  const live = (await pendingActions(biz.id)).filter((p) => created.some((c) => c.id === p.id)).reverse();
+  // Proposals replaced later in the same turn are already "superseded": only the live ones count.
+  const proposals = (await pendingActions(biz.id)).filter((p) => created.some((c) => c.id === p.id)).reverse();
+  return { reply, proposals };
+}
 
-  if (reply) await sendToOwner(biz, reply);
-  await deliverProposals(biz, live);
+export interface SinkDeps {
+  sendToOwner(biz: Business, text: string): Promise<boolean>;
+  deliverProposals(biz: Business, actions: ActionRow[]): Promise<void>;
+  addMessage: typeof addMessage;
+}
+
+export const defaultSinkDeps: SinkDeps = { sendToOwner: (biz, text) => sendToOwner(biz, text), deliverProposals: (biz, a) => deliverProposals(biz, a), addMessage };
+
+/**
+ * Sends the agent's answer back on the channel the owner wrote on.
+ * - whatsapp: the reply, then each proposal as the business's approval mode says (approval.ts).
+ * - web: the reply is stored in the thread (channel "web") and nothing at all goes to WhatsApp; the
+ *   dashboard shows the proposals as cards and decides them through /api/actions/:id/approve | reject.
+ */
+export async function deliverAgentOutput(biz: Business, channel: Channel, out: AgentOutput, deps: SinkDeps = defaultSinkDeps): Promise<void> {
+  if (channel === "web") {
+    if (out.reply) await deps.addMessage({ business_id: biz.id, direction: "out", kind: "text", body: out.reply, channel: "web" });
+    return;
+  }
+  if (out.reply) await deps.sendToOwner(biz, out.reply);
+  await deps.deliverProposals(biz, out.proposals);
 }
