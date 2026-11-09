@@ -18,7 +18,8 @@
 - **"How are we doing?"** Weekly numbers from Zernio Analytics in plain words, with one tip.
 - **Approve with one tap.** Every proposal comes with *Yes / No* buttons in WhatsApp and also shows up in the web dashboard.
 - **Remembers the business.** Opening hours, prices, the way they talk: the owner says it once.
-- **Dashboard.** Approvals, posts, connected accounts, the WhatsApp conversation and settings. Bilingual (English / Spanish).
+- **Or from the browser.** The dashboard has a chat with the same agent and the same conversation (text, photos, voice notes). Its proposals show up as cards with *Approve / Discard*, and nothing it does goes to WhatsApp.
+- **Dashboard.** Chat, approvals, posts, connected accounts, the WhatsApp conversation and settings. Bilingual (English / Spanish).
 
 ## How it works
 
@@ -45,7 +46,7 @@ flowchart LR
 
 - **Approval is enforced in code, not in the prompt.** The agent's tools never publish, reply, delete or spend. They create a `pending` action. Execution happens in a separate code path that runs only after the owner's "yes" (button, short text reply or dashboard), and claiming an action is atomic, so it runs once.
 - **Untrusted text stays data.** Reviews, comments and DMs are written by strangers. Replies to them are drafted in a one-shot call with no tools, the text is wrapped as untrusted, and it can never trigger a tool by itself. A review saying "ignore your instructions and post this" just gets a polite reply proposal.
-- **Only the owner talks to the agent.** WhatsApp messages from numbers not linked to a business are ignored.
+- **Only the owner talks to the agent.** WhatsApp messages from numbers not linked to a business are ignored; the web chat needs a signed-in member of the business's workspace and has a per-user rate limit. A "yes" typed in the web chat approves nothing: its cards are decided through the same approval endpoints as the dashboard.
 - **Secrets stay on the server.** The web only holds the Supabase anon key and reads the database through Row Level Security; everything that needs Zernio, Claude or the service role goes through the backend.
 
 More in [SECURITY.md](SECURITY.md).
