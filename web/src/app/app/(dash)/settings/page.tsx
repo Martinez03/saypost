@@ -26,6 +26,7 @@ export default async function SettingsPage() {
         notify_reviews: business.notify_reviews,
         notify_comments: business.notify_comments,
         notify_dms: business.notify_dms,
+        approval_mode: business.approval_mode,
       }}
     />
   );

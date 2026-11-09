@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
+import { ZernioIcon } from "@/components/landing/brand-icons";
 import { LangToggle } from "@/components/lang-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import type { Dict } from "@/i18n";
@@ -19,13 +20,19 @@ export function SiteFooter({ t, githubUrl, licenseUrl, guideUrl }: { t: Dict; gi
           <Logo />
           <p className="text-muted-foreground">{f.tagline}</p>
           <p>
-            <a href="https://zernio.com" target="_blank" rel="noopener noreferrer" className="font-medium text-primary-ink underline decoration-primary/30 underline-offset-4 hover:decoration-primary">
+            <a
+              href="https://zernio.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 font-medium text-primary-ink underline decoration-primary/30 underline-offset-4 hover:decoration-primary"
+            >
+              <ZernioIcon className="size-5" />
               {f.built}
             </a>
           </p>
         </div>
         <div className="grid content-start gap-5 md:justify-items-end">
-          <nav aria-label="Dilo" className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
+          <nav aria-label="Saypost" className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
             {links.map((l) =>
               l.external ? (
                 <a key={l.label} href={l.href} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">

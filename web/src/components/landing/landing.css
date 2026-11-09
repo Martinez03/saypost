@@ -1,5 +1,5 @@
 /*
- * Hallmark stamp. Direction: "paper and ink, one green". Warm paper, near-black ink, Dilo green only
+ * Hallmark stamp. Direction: "paper and ink, one green". Warm paper, near-black ink, Saypost green only
  * where something gets approved or goes live. Display face Familjen Grotesk, body Inter, mono for code.
  * Illustrations are drawn in one hand: 1.5px round ink lines, flat paper and well fills, green for the "yes".
  * Scoped to the landing (.landing) so the dashboard keeps its own surfaces.
@@ -29,6 +29,9 @@ html:has(.landing) body {
   --ill-accent-soft: color-mix(in oklab, var(--brand-bright) 22%, var(--background));
   --ill-warm: oklch(0.86 0.09 70);
   --ill-star: oklch(0.8 0.15 80);
+  /* Zernio's own coral, only on its icon. */
+  --zernio: oklch(0.6 0.21 33);
+  --zernio-ink: oklch(0.985 0.005 40);
   /* The chat panel. */
   --wa-bar: oklch(0.42 0.09 155);
   --wa-bar-ink: oklch(0.985 0.005 150);
@@ -39,6 +42,7 @@ html:has(.landing) body {
   --code-dim: oklch(0.66 0.012 160);
   --code-str: oklch(0.82 0.11 150);
   --code-key: oklch(0.83 0.08 75);
+  --code-edge: color-mix(in oklab, var(--code-ink) 12%, var(--code-bg));
 }
 .dark .landing {
   --ill-ink: color-mix(in oklab, var(--foreground) 82%, var(--background));
@@ -114,6 +118,10 @@ html:has(.landing) body {
 }
 .ill .warm {
   fill: var(--ill-warm);
+}
+/* Drawings reused at small scale (the shops) keep the same line weight as everything else. */
+.ill .keep-stroke * {
+  vector-effect: non-scaling-stroke;
 }
 .ill .star {
   fill: var(--ill-star);

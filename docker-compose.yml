@@ -1,4 +1,4 @@
-# Self-hosted Dilo: the backend and the web, plus an optional Caddy for automatic HTTPS.
+# Self-hosted Saypost: the backend and the web, plus an optional Caddy for automatic HTTPS.
 #
 #   cp .env.example .env                              # fill it in (docs/SELF_HOSTING.md)
 #   docker compose up -d --build                      # backend on 127.0.0.1:4100, web on 127.0.0.1:3100
@@ -6,7 +6,7 @@
 #
 # The web bakes its NEXT_PUBLIC_* values in at build time: after changing SUPABASE_URL, SUPABASE_ANON_KEY,
 # API_URL or WEB_URL, rebuild it with `docker compose build web`.
-name: dilo
+name: saypost
 
 services:
   backend:

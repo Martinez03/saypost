@@ -1,5 +1,6 @@
 // Agent tools. Read tools run immediately; propose_* / revise_reply only create pending actions.
 import type Anthropic from "@anthropic-ai/sdk";
+import { proposalDelivery } from "../approval.js";
 import { createAction, type PublishPayload, type ReplyCommentPayload, type ReplyReviewPayload } from "../actions.js";
 import { getAction, listAccounts, updateBusiness, type ActionRow, type Business } from "../db.js";
 import { platformName, stars } from "../i18n.js";
@@ -8,6 +9,13 @@ import * as zernio from "../zernio.js";
 type Tool = Anthropic.Beta.BetaTool;
 
 const str = (description: string) => ({ type: "string", description });
+
+/** What the model is told after proposing, so it does not ask a client to confirm in agency mode. */
+function whoApproves(biz: Business): string {
+  return proposalDelivery(biz.approval_mode, "whatsapp") === "buttons"
+    ? "the owner now sees the preview with Yes/No buttons."
+    : "their agency reviews it in the dashboard and the system already told the owner so. Do not ask the owner to confirm.";
+}
 
 export const TOOLS: Tool[] = [
   {
@@ -91,7 +99,7 @@ export const TOOLS: Tool[] = [
   },
   {
     name: "list_posts",
-    description: "Recent and scheduled posts made through Dilo, with status, time, platforms and links.",
+    description: "Recent and scheduled posts made through Saypost, with status, time, platforms and links.",
     strict: true,
     input_schema: { type: "object", properties: {}, required: [], additionalProperties: false },
   },
@@ -160,7 +168,7 @@ export async function runTool(biz: Business, name: string, input: Record<string,
         source: "whatsapp",
         supersede: (p) => p.kind === "publish",
       });
-      return { content: `Proposal ${action.id} created; the owner now sees the preview with Yes/No buttons. Reply with one short line only.`, created: [action] };
+      return { content: `Proposal ${action.id} created; ${whoApproves(biz)} Reply with one short line only.`, created: [action] };
     }
     case "propose_review_reply": {
       const profileId = ensureProfile(biz);
@@ -177,7 +185,7 @@ export async function runTool(biz: Business, name: string, input: Record<string,
         source: "whatsapp",
         supersede: (p) => p.kind === "reply_review" && (p.payload as { reviewId?: string }).reviewId === review.id,
       });
-      return { content: `Proposal ${action.id} created; the owner sees it with Yes/No buttons.`, created: [action] };
+      return { content: `Proposal ${action.id} created; ${whoApproves(biz)}`, created: [action] };
     }
     case "revise_reply": {
       const old = await getAction(String(input.action_id));
@@ -194,7 +202,7 @@ export async function runTool(biz: Business, name: string, input: Record<string,
         source: "whatsapp",
         supersede: (p) => p.id === old.id,
       });
-      return { content: `Revised proposal ${action.id} created; the owner sees it with Yes/No buttons.`, created: [action] };
+      return { content: `Revised proposal ${action.id} created; ${whoApproves(biz)}`, created: [action] };
     }
     case "propose_cancel_post": {
       const postId = String(input.post_id);

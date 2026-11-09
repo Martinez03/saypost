@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { AlertTriangle, CheckCheck, Star } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, Building2, CheckCheck, Star } from "lucide-react";
 import { EmptyState } from "@/components/app/empty-state";
 import { PageHeader, SectionTitle } from "@/components/app/page-header";
 import { PlatformIcon } from "@/components/platform-icon";
@@ -9,7 +10,8 @@ import { getI18n } from "@/i18n/server";
 import type { Action, ActionStatus, Json } from "@/lib/database.types";
 import { dateTime, relativeTime } from "@/lib/format";
 import { platformName } from "@/lib/platforms";
-import { getSession, requireBusiness } from "@/lib/session";
+import { getBusinesses, getSession, requireBusiness } from "@/lib/session";
+import { cn } from "@/lib/utils";
 import { ActionButtons } from "./action-buttons";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -50,7 +52,7 @@ function readContext(raw: Json | null): Context | null {
   return ctx.author || ctx.text || ctx.rating !== null ? ctx : null;
 }
 
-function ActionCard({ action, t, lang, timeZone, now }: { action: Action; t: Dict; lang: Lang; timeZone: string; now: number }) {
+function ActionCard({ action, t, lang, timeZone, now, client }: { action: Action; t: Dict; lang: Lang; timeZone: string; now: number; client?: string }) {
   const a = t.approvals;
   const ctx = readContext(action.context);
   const pending = action.status === "pending";
@@ -61,6 +63,11 @@ function ActionCard({ action, t, lang, timeZone, now }: { action: Action; t: Dic
       <header className="flex flex-wrap items-start justify-between gap-2">
         <div className="grid min-w-0 gap-1.5">
           <div className="flex flex-wrap items-center gap-1.5">
+            {client && (
+              <Badge variant="outline" data-client-badge>
+                <Building2 aria-hidden /> {client}
+              </Badge>
+            )}
             <Badge variant="secondary">{a.kinds[action.kind] ?? action.kind}</Badge>
             <Badge variant={STATUS_VARIANT[action.status] ?? "outline"}>{a.statuses[action.status] ?? action.status}</Badge>
           </div>
@@ -124,15 +131,26 @@ function ActionCard({ action, t, lang, timeZone, now }: { action: Action; t: Dic
   );
 }
 
-export default async function ApprovalsPage() {
-  const [business, { supabase }, { t, lang }] = await Promise.all([requireBusiness(), getSession(), getI18n()]);
+export default async function ApprovalsPage({ searchParams }: { searchParams: Promise<{ client?: string | string[] }> }) {
+  const [business, businesses, { supabase }, { t, lang }, params] = await Promise.all([requireBusiness(), getBusinesses(), getSession(), getI18n(), searchParams]);
+  // One business: just its actions. Several (an agency): all of them, optionally filtered by client.
+  const multi = businesses.length > 1;
+  const filter = multi && typeof params.client === "string" && businesses.some((b) => b.id === params.client) ? params.client : null;
+  const scope = multi ? (filter ? [filter] : businesses.map((b) => b.id)) : [business.id];
+  const names = new Map(businesses.map((b) => [b.id, b.name]));
   const [pending, recent] = await Promise.all([
-    supabase.from("actions").select("*").eq("status", "pending").order("created_at", { ascending: false }).limit(100),
-    supabase.from("actions").select("*").neq("status", "pending").order("created_at", { ascending: false }).limit(20),
+    supabase.from("actions").select("*").in("business_id", scope).eq("status", "pending").order("created_at", { ascending: false }).limit(100),
+    supabase.from("actions").select("*").in("business_id", scope).neq("status", "pending").order("created_at", { ascending: false }).limit(20),
   ]);
   if (pending.error) throw new Error(pending.error.message);
 
   const a = t.approvals;
+  const client = (action: Action) => (multi ? names.get(action.business_id) : undefined);
+  const chip = (active: boolean) =>
+    cn(
+      "inline-flex h-7 items-center rounded-full border px-3 text-xs font-medium transition-colors hover:bg-foreground/[0.045] focus-visible:ring-2 focus-visible:ring-ring outline-none",
+      active && "border-primary/60 bg-primary-soft text-primary-ink hover:bg-primary-soft",
+    );
   // eslint-disable-next-line react-hooks/purity -- rendered per request
   const now = Date.now();
   const pendingRows = pending.data ?? [];
@@ -140,7 +158,20 @@ export default async function ApprovalsPage() {
 
   return (
     <div className="grid gap-8">
-      <PageHeader title={a.title} description={a.subtitle} />
+      <PageHeader title={a.title} description={multi ? t.agency.approvalsSubtitle : a.subtitle} />
+
+      {multi && (
+        <nav aria-label={t.agency.filterLabel} className="-mt-4 flex flex-wrap gap-1.5" data-client-filter>
+          <Link href="/app/approvals" className={chip(!filter)} aria-current={!filter ? "page" : undefined}>
+            {t.agency.filterAll}
+          </Link>
+          {businesses.map((b) => (
+            <Link key={b.id} href={`/app/approvals?client=${b.id}`} className={chip(filter === b.id)} aria-current={filter === b.id ? "page" : undefined}>
+              {b.name}
+            </Link>
+          ))}
+        </nav>
+      )}
 
       <section aria-labelledby="pending-title" className="grid gap-4">
         <SectionTitle id="pending-title" title={`${a.pendingTitle}${pendingRows.length ? ` (${pendingRows.length})` : ""}`} />
@@ -149,7 +180,7 @@ export default async function ApprovalsPage() {
         ) : (
           <div className="grid gap-4">
             {pendingRows.map((action) => (
-              <ActionCard key={action.id} action={action} t={t} lang={lang} timeZone={business.timezone} now={now} />
+              <ActionCard key={action.id} action={action} t={t} lang={lang} timeZone={business.timezone} now={now} client={client(action)} />
             ))}
           </div>
         )}
@@ -162,7 +193,7 @@ export default async function ApprovalsPage() {
         ) : (
           <div className="grid gap-4">
             {recentRows.map((action) => (
-              <ActionCard key={action.id} action={action} t={t} lang={lang} timeZone={business.timezone} now={now} />
+              <ActionCard key={action.id} action={action} t={t} lang={lang} timeZone={business.timezone} now={now} client={client(action)} />
             ))}
           </div>
         )}

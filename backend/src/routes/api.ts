@@ -1,17 +1,28 @@
 // Dashboard endpoints. Every /api/* call carries the user's Supabase access token.
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { approveAction, rejectAction } from "../actions.js";
+import { isApprovalMode } from "../approval.js";
 import { config } from "../config.js";
-import { db, getAction, getBusinessByOwner, updateBusiness, upsertAccount, type Business } from "../db.js";
+import { businessesInWorkspaces, db, getAction, updateBusiness, upsertAccount, userWorkspaceIds, type Business } from "../db.js";
+import { canActOn, pickBusiness } from "../scope.js";
 import * as zernio from "../zernio.js";
 
 const PLATFORMS = new Set(["instagram", "facebook", "googlebusiness", "linkedin", "tiktok", "twitter", "threads", "bluesky", "youtube", "pinterest"]);
 
 declare module "fastify" {
   interface FastifyRequest {
+    /** The business this request acts on (X-Business-Id, or the user's first one). */
     biz?: Business;
+    userId?: string;
+    workspaceIds?: string[];
+    /** Every business in the user's workspaces, oldest first. */
+    businesses?: Business[];
   }
 }
+
+/** Routes that work before the user has a business. */
+const NO_BUSINESS_NEEDED = new Set(["/api/businesses"]);
+const TONES = new Set(["friendly", "professional", "fun", "elegant"]);
 
 function fail(reply: FastifyReply, status: number, error: string, message?: string) {
   return reply.code(status).send({ error, message: message ?? error });
@@ -23,9 +34,18 @@ async function auth(req: FastifyRequest, reply: FastifyReply) {
   if (!token) return fail(reply, 401, "unauthorized");
   const { data, error } = await db.auth.getUser(token);
   if (error || !data.user) return fail(reply, 401, "unauthorized");
-  const biz = await getBusinessByOwner(data.user.id);
-  if (!biz) return fail(reply, 404, "no_business", "Create your business first");
-  req.biz = biz;
+  req.userId = data.user.id;
+  req.workspaceIds = await userWorkspaceIds(data.user.id);
+  req.businesses = await businessesInWorkspaces(req.workspaceIds);
+  if (NO_BUSINESS_NEEDED.has(req.routeOptions.url ?? "")) return;
+  const scope = pickBusiness(req.businesses, req.headers["x-business-id"]);
+  if (!scope.ok) return fail(reply, scope.status, scope.error, scope.status === 404 ? "Create your business first" : "That business is not in your workspace");
+  req.biz = scope.biz;
+}
+
+function text(v: unknown, max: number): string | null {
+  const s = typeof v === "string" ? v.trim() : "";
+  return s ? s.slice(0, max) : null;
 }
 
 async function ensureProfile(biz: Business): Promise<string> {
@@ -67,6 +87,72 @@ function zernioFail(reply: FastifyReply, e: unknown) {
 
 export async function apiRoutes(app: FastifyInstance) {
   app.addHook("preHandler", auth);
+
+  // Businesses in the user's workspaces with a short summary (agency view and switcher).
+  app.get("/api/businesses", async (req) => {
+    const list = req.businesses!;
+    const ids = list.map((b) => b.id);
+    const [accounts, pending] = ids.length
+      ? await Promise.all([
+          db.from("social_accounts").select("business_id").in("business_id", ids).eq("status", "connected"),
+          db.from("actions").select("business_id").in("business_id", ids).eq("status", "pending"),
+        ])
+      : [{ data: [] }, { data: [] }];
+    const count = (rows: { business_id: string }[] | null, id: string) => (rows ?? []).filter((r) => r.business_id === id).length;
+    return {
+      businesses: list.map((b) => ({
+        id: b.id,
+        name: b.name,
+        category: b.category,
+        city: b.city,
+        language: b.language,
+        workspaceId: b.workspace_id,
+        approvalMode: b.approval_mode,
+        whatsappStatus: b.whatsapp_status,
+        connectedAccounts: count(accounts.data as { business_id: string }[] | null, b.id),
+        pendingActions: count(pending.data as { business_id: string }[] | null, b.id),
+      })),
+    };
+  });
+
+  // A new (client) business in one of the user's workspaces; creates the workspace if they have none.
+  app.post<{ Body: Record<string, unknown> }>("/api/businesses", async (req, reply) => {
+    const b = req.body ?? {};
+    const name = text(b.name, 120);
+    if (!name) return fail(reply, 400, "bad_name", "The business needs a name");
+    const tone = TONES.has(String(b.tone)) ? String(b.tone) : "friendly";
+    const language = b.language === "en" ? "en" : "es";
+    const approvalMode = b.approval_mode === undefined ? "owner_whatsapp" : b.approval_mode;
+    if (!isApprovalMode(approvalMode)) return fail(reply, 400, "bad_approval_mode");
+    let workspaceId = text(b.workspace_id, 64);
+    if (workspaceId && !req.workspaceIds!.includes(workspaceId)) return fail(reply, 403, "forbidden_workspace", "That workspace is not yours");
+    workspaceId ??= req.workspaceIds![0] ?? null;
+    if (!workspaceId) {
+      const { data: ws, error } = await db.from("workspaces").insert({ name, created_by: req.userId }).select("id").single();
+      if (error) throw new Error(`create workspace: ${error.message}`);
+      const { error: e2 } = await db.from("workspace_members").insert({ workspace_id: ws.id, user_id: req.userId, role: "owner" });
+      if (e2) throw new Error(`add member: ${e2.message}`);
+      workspaceId = ws.id as string;
+    }
+    const { data, error } = await db
+      .from("businesses")
+      .insert({
+        owner_id: req.userId,
+        workspace_id: workspaceId,
+        name,
+        category: text(b.category, 60),
+        city: text(b.city, 120),
+        description: text(b.description, 4000),
+        tone,
+        language,
+        timezone: text(b.timezone, 64) ?? "Europe/Madrid",
+        approval_mode: approvalMode,
+      })
+      .select("*")
+      .single();
+    if (error) return fail(reply, 400, "create_failed", error.message);
+    return reply.code(201).send({ business: data });
+  });
 
   app.post<{ Body: { platform?: string } }>("/api/connect", async (req, reply) => {
     const platform = String(req.body?.platform ?? "");
@@ -176,8 +262,9 @@ export async function apiRoutes(app: FastifyInstance) {
   });
 
   app.post<{ Params: { id: string } }>("/api/actions/:id/approve", async (req, reply) => {
+    // Any business in the user's workspaces, not just the selected one (unified approvals).
     const action = await getAction(req.params.id);
-    if (!action || action.business_id !== req.biz!.id) return fail(reply, 404, "not_found");
+    if (!action || !canActOn(req.businesses!, action.business_id)) return fail(reply, 404, "not_found");
     if (action.status !== "pending") return fail(reply, 409, "already_decided");
     const { row } = await approveAction(action.id, "dashboard");
     return { action: row };
@@ -185,7 +272,7 @@ export async function apiRoutes(app: FastifyInstance) {
 
   app.post<{ Params: { id: string } }>("/api/actions/:id/reject", async (req, reply) => {
     const action = await getAction(req.params.id);
-    if (!action || action.business_id !== req.biz!.id) return fail(reply, 404, "not_found");
+    if (!action || !canActOn(req.businesses!, action.business_id)) return fail(reply, 404, "not_found");
     const row = await rejectAction(action.id, "dashboard");
     if (!row) return fail(reply, 409, "already_decided");
     return { action: row };

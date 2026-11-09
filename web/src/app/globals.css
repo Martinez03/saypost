@@ -60,10 +60,10 @@
 }
 
 /*
- * Dilo design system: neutral surfaces (white, soft greys, near-black) and ONE fresh green accent.
+ * Saypost design system: neutral surfaces (white, soft greys, near-black) and ONE fresh green accent.
  * The accent (`primary`) is for the main button of a screen, the active nav item and key states only.
  * Status colours are separate from the accent: positive, destructive, warning.
- * The green is Dilo's own (not WhatsApp's): darker for white text on buttons (WCAG AA), brighter for the mark.
+ * The green is Saypost's own (not WhatsApp's): darker for white text on buttons (WCAG AA), brighter for the mark.
  */
 
 :root {
@@ -98,7 +98,7 @@
   --sidebar-foreground: oklch(0.45 0.012 160);
   --sidebar-border: oklch(0.922 0.005 160);
   --sidebar-ring: oklch(0.708 0 0);
-  /* The chat mock and the WhatsApp page: a soft tinted wall, white bubbles from Dilo, green ones from the owner. */
+  /* The chat mock and the WhatsApp page: a soft tinted wall, white bubbles from Saypost, green ones from the owner. */
   --chat: oklch(0.965 0.012 150);
   --bubble-in: oklch(1 0 0);
   --bubble-out: oklch(0.94 0.06 150);

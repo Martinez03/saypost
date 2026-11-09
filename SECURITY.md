@@ -1,6 +1,6 @@
 # Security
 
-Dilo can publish on a business's social accounts and reply to its customers. Two rules keep that safe, and both are enforced in code.
+Saypost can publish on a business's social accounts and reply to its customers. Two rules keep that safe, and both are enforced in code.
 
 ## Reporting a vulnerability
 

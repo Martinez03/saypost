@@ -170,7 +170,7 @@ export function WhatsappPanel({ initialStatus, initialPhone }: { initialStatus: 
         <div className="grid gap-5">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-1 rounded-lg border bg-positive/5 p-3">
-              <p className="text-xs text-muted-foreground">{w.diloNumber}</p>
+              <p className="text-xs text-muted-foreground">{w.saypostNumber}</p>
               <p className="num text-lg font-semibold">{sandbox ?? "—"}</p>
               {chatLink && (
                 <a href={chatLink} target="_blank" rel="noopener noreferrer" className={cn(buttonVariants({ size: "sm" }), "mt-1 w-fit")}>

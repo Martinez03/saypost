@@ -1,7 +1,7 @@
 import "server-only";
 
 // The public repository behind the landing's GitHub links. Set NEXT_PUBLIC_GITHUB_REPO ("owner/name") in a fork.
-export const GITHUB_REPO = process.env.NEXT_PUBLIC_GITHUB_REPO || "Martinez03/dilo";
+export const GITHUB_REPO = process.env.NEXT_PUBLIC_GITHUB_REPO || "Martinez03/saypost";
 export const GITHUB_URL = `https://github.com/${GITHUB_REPO}`;
 
 export function githubFile(path: string): string {

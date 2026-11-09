@@ -1,6 +1,6 @@
-# Self-hosting Dilo
+# Self-hosting Saypost
 
-This guide takes you from a fresh clone to a running Dilo that answers on WhatsApp: your own server, your own domain, your own keys.
+This guide takes you from a fresh clone to a running Saypost that answers on WhatsApp: your own server, your own domain, your own keys.
 
 - [What you are running](#what-you-are-running)
 - [Requirements](#requirements)
@@ -34,7 +34,7 @@ Everyone who signs up on your instance uses **your** Zernio account and **your**
 - A **Zernio** account and API key ([zernio.com](https://zernio.com)). The plan decides how many social accounts you can connect.
 - A **Supabase** project (cloud or self-hosted). The Supabase CLI (`npx supabase`) to apply the schema.
 - An **Anthropic** API key ([console.anthropic.com](https://console.anthropic.com)) for the agent.
-- An **OpenAI** API key ([platform.openai.com](https://platform.openai.com)), only for voice notes. Optional: without it Dilo asks the owner to type.
+- An **OpenAI** API key ([platform.openai.com](https://platform.openai.com)), only for voice notes. Optional: without it Saypost asks the owner to type.
 - A **server with Docker** (Docker Engine with Compose v2.24+). 1 vCPU and 1 GB RAM are enough for a handful of businesses. Or any host that runs Node 22.
 - A **domain** (or subdomain) whose DNS you control, for the public HTTPS URL. For quick tests, a tunnel (`cloudflared`, `ngrok`) works.
 - **Node 22** on the machine where you run `scripts/setup-zernio-webhook.mjs` (or use the one-liner with Docker in [step 7](#7-register-the-zernio-webhook)).
@@ -42,8 +42,8 @@ Everyone who signs up on your instance uses **your** Zernio account and **your**
 ## 1. Clone
 
 ```bash
-git clone https://github.com/Martinez03/dilo.git
-cd dilo
+git clone https://github.com/Martinez03/saypost.git
+cd saypost
 ```
 
 ## 2. Supabase
@@ -61,9 +61,9 @@ cd dilo
 
    This runs `supabase/migrations/*.sql`: tables, indexes and Row Level Security policies.
 3. **Project Settings → API**: copy the **Project URL**, the **anon** (or publishable) key and the **service_role** (or secret) key. The service role key bypasses RLS: it only goes to the backend.
-4. **Authentication → URL Configuration**: set **Site URL** to your public web URL (e.g. `https://dilo.example.com`) and add `https://dilo.example.com/**` to **Redirect URLs**.
+4. **Authentication → URL Configuration**: set **Site URL** to your public web URL (e.g. `https://saypost.example.com`) and add `https://saypost.example.com/**` to **Redirect URLs**.
 5. **Authentication → Providers → Email**:
-   - *Confirm email*: off is the quickest way to try Dilo. To keep it on, configure your own SMTP under **Authentication → Emails** (Supabase's built-in sender is heavily rate-limited).
+   - *Confirm email*: off is the quickest way to try Saypost. To keep it on, configure your own SMTP under **Authentication → Emails** (Supabase's built-in sender is heavily rate-limited).
    - *Allow new users to sign up*: turn it off once your own accounts exist if the instance is private. Every business on your instance spends your Zernio, Claude and OpenAI quota.
 
 ### Local Supabase (development)
@@ -96,10 +96,10 @@ Docker Compose reads `.env` next to `docker-compose.yml`. The backend container 
 
 | Variable | Used by | Required | Notes |
 |---|---|---|---|
-| `DOMAIN` | Caddy | with `--profile caddy` | e.g. `dilo.example.com`. Its DNS must point at the server. |
-| `WEB_URL` | backend, web | yes | Public URL of the dashboard, e.g. `https://dilo.example.com`. The backend's CORS origin and the return URL after connecting accounts. No trailing slash. |
+| `DOMAIN` | Caddy | with `--profile caddy` | e.g. `saypost.example.com`. Its DNS must point at the server. |
+| `WEB_URL` | backend, web | yes | Public URL of the dashboard, e.g. `https://saypost.example.com`. The backend's CORS origin and the return URL after connecting accounts. No trailing slash. |
 | `API_URL` | web, webhook script | yes | Public URL of the backend. With the bundled Caddy it is the same as `WEB_URL`. |
-| `WEB_ORIGINS` | backend | no | Extra CORS origins, comma-separated. `*` matches inside one host label: `https://*--my-dilo.netlify.app`. |
+| `WEB_ORIGINS` | backend | no | Extra CORS origins, comma-separated. `*` matches inside one host label: `https://*--my-saypost.netlify.app`. |
 | `SUPABASE_URL` | backend, web | yes | Project URL. |
 | `SUPABASE_ANON_KEY` | web | yes | Public; baked into the web bundle. |
 | `SUPABASE_SERVICE_ROLE_KEY` | backend | yes | Secret. |
@@ -121,13 +121,13 @@ Running without Docker? The same variables go in `backend/.env.local` (see `back
 One domain serves everything over HTTPS; Caddy gets and renews the certificate.
 
 1. Point an `A` (and `AAAA` if you have IPv6) record for `DOMAIN` at the server. Open ports 80 and 443.
-2. In `.env`: `DOMAIN=dilo.example.com`, `WEB_URL=https://dilo.example.com`, `API_URL=https://dilo.example.com`.
+2. In `.env`: `DOMAIN=saypost.example.com`, `WEB_URL=https://saypost.example.com`, `API_URL=https://saypost.example.com`.
 3. Start:
 
    ```bash
    docker compose --profile caddy up -d --build
    docker compose ps
-   curl -s https://dilo.example.com/health
+   curl -s https://saypost.example.com/health
    ```
 
    `/health` answers `{"ok":true,"zernio":true,"claude":true,"transcribe":true}`. A `false` means that key is missing.
@@ -180,30 +180,30 @@ You can also create the webhook by hand in the Zernio dashboard: same URL, same 
 
 ## 8. WhatsApp: sandbox vs. your own number
 
-Dilo talks to each business owner on WhatsApp through Zernio. Owners are matched by their phone number, saved in the dashboard (**WhatsApp** page).
+Saypost talks to each business owner on WhatsApp through Zernio. Owners are matched by their phone number, saved in the dashboard (**WhatsApp** page).
 
 ### Sandbox (testing)
 
-Zernio's WhatsApp sandbox needs no Meta setup, so it is the quickest way to try Dilo:
+Zernio's WhatsApp sandbox needs no Meta setup, so it is the quickest way to try Saypost:
 
 1. In the dashboard, **WhatsApp → Activate** with the owner's mobile in international format. The backend starts a sandbox session; Zernio sends a WhatsApp template from the sandbox number.
 2. The owner replies to that template to open the session.
-3. **The owner then sends one more message** (e.g. "hi"). The activation reply itself does not fire `message.received`, so Dilo only links the conversation on the next message.
+3. **The owner then sends one more message** (e.g. "hi"). The activation reply itself does not fire `message.received`, so Saypost only links the conversation on the next message.
 
-Sandbox limits: one test phone, 50 messages a day, and the 24-hour customer-service window (Dilo can only write to the owner within 24 hours of their last message).
+Sandbox limits: one test phone, 50 messages a day, and the 24-hour customer-service window (Saypost can only write to the owner within 24 hours of their last message).
 
 ### Your own WhatsApp Business number (production)
 
-Connect a WhatsApp Business number to your Zernio account (see Zernio's WhatsApp docs). The backend already handles messages from any WhatsApp account: when a known owner writes to that number, Dilo answers on the same conversation. Current limitations:
+Connect a WhatsApp Business number to your Zernio account (see Zernio's WhatsApp docs). The backend already handles messages from any WhatsApp account: when a known owner writes to that number, Saypost answers on the same conversation. Current limitations:
 
 - The dashboard's **Activate** button still starts a sandbox session. With your own number, save the owner's phone in the dashboard and have them message your number directly.
-- Notifications about new reviews or comments sent more than 24 hours after the owner's last message need approved WhatsApp templates, which Dilo does not send yet.
+- Notifications about new reviews or comments sent more than 24 hours after the owner's last message need approved WhatsApp templates, which Saypost does not send yet.
 
 Contributions here are welcome; see [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ## 9. Connect social accounts
 
-In the dashboard, **Accounts → Connect** a network. The backend creates the business's Zernio profile on first use (`externalId` = the business id) and returns Zernio's connect link; after authorizing, Zernio sends the owner back to `WEB_URL/app/accounts?connected=<platform>` and the account appears. Zernio also fires `account.connected`, and Dilo confirms it on WhatsApp.
+In the dashboard, **Accounts → Connect** a network. The backend creates the business's Zernio profile on first use (`externalId` = the business id) and returns Zernio's connect link; after authorizing, Zernio sends the owner back to `WEB_URL/app/accounts?connected=<platform>` and the account appears. Zernio also fires `account.connected`, and Saypost confirms it on WhatsApp.
 
 Each connected account counts against your Zernio plan, across all businesses on your instance.
 

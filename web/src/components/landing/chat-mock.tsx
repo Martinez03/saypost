@@ -6,8 +6,8 @@ import type { Dict } from "@/i18n";
 import { cn } from "@/lib/utils";
 
 // A WhatsApp-style conversation built from plain elements (no screenshot, no phone frame): the owner
-// sends a voice note, Dilo answers with the post preview and the same Yes/No buttons the bot sends,
-// the owner taps "Yes" and Dilo confirms it's live. Strings match the backend's fixed WhatsApp texts.
+// sends a voice note, Saypost answers with the post preview and the same Yes/No buttons the bot sends,
+// the owner taps "Yes" and Saypost confirms it's live. Strings match the backend's fixed WhatsApp texts.
 
 const WAVE = [5, 9, 14, 8, 17, 11, 6, 13, 18, 10, 7, 15, 9, 12, 6, 10, 14, 7, 11, 5, 9, 13];
 

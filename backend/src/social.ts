@@ -1,5 +1,5 @@
 // Events from the business's social accounts (Zernio webhooks + polling) → proposals for the owner.
-import { createAction, proposeToOwner, type ReplyCommentPayload, type ReplyDmPayload, type ReplyReviewPayload } from "./actions.js";
+import { createAction, deliverProposals, type ReplyCommentPayload, type ReplyDmPayload, type ReplyReviewPayload } from "./actions.js";
 import { draftReply } from "./agent/drafts.js";
 import { addEvent, db, getBusiness, getBusinessByProfile, markSeen, upsertAccount, type Business } from "./db.js";
 import { handleOwnerMessage, type InboxMessageEvent } from "./inbound.js";
@@ -100,7 +100,7 @@ export async function onReview(ev: Base | null, review: ReviewEv, account?: { id
     supersede: (p) => p.kind === "reply_review" && (p.payload as { reviewId?: string }).reviewId === review.id,
   });
   const intro = `${s.newReview(who, stars(review.rating, review.recommendationType), platformName(review.platform), (review.text ?? "").slice(0, 600))}\n\n${s.proposedReply(reply)}`;
-  await proposeToOwner(biz, action, intro);
+  await deliverProposals(biz, [action], intro);
 }
 
 // ------------------------------------------------------------------ comments
@@ -143,7 +143,7 @@ async function onComment(ev: Base, c: CommentEv): Promise<void> {
     supersede: (p) => p.kind === "reply_comment" && (p.payload as { commentId?: string }).commentId === c.comment.id,
   });
   const s = t(biz.language);
-  await proposeToOwner(biz, action, `${s.newComment(who, platformName(c.comment.platform), c.comment.text.slice(0, 500))}\n\n${s.proposedReply(reply)}`);
+  await deliverProposals(biz, [action], `${s.newComment(who, platformName(c.comment.platform), c.comment.text.slice(0, 500))}\n\n${s.proposedReply(reply)}`);
 }
 
 // ------------------------------------------------------------------ DMs (Instagram / Facebook…)
@@ -169,7 +169,7 @@ async function onDm(ev: Base, m: InboxMessageEvent): Promise<void> {
     supersede: (p) => p.kind === "reply_dm" && (p.payload as { conversationId?: string }).conversationId === m.conversation.id,
   });
   const s = t(biz.language);
-  await proposeToOwner(biz, action, `${s.newDm(who, platformName(m.account.platform), text.slice(0, 500))}\n\n${s.proposedReply(reply)}`);
+  await deliverProposals(biz, [action], `${s.newDm(who, platformName(m.account.platform), text.slice(0, 500))}\n\n${s.proposedReply(reply)}`);
 }
 
 // ------------------------------------------------------------------ accounts & posts

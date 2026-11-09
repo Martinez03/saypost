@@ -4,17 +4,19 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { ApprovalModeField } from "@/components/app/approval-mode-field";
 import { BusinessFields, type BusinessValues } from "@/components/app/business-fields";
 import { PageHeader, SectionTitle } from "@/components/app/page-header";
 import { useI18n } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import type { ApprovalMode } from "@/lib/database.types";
 import { createClient } from "@/lib/supabase/client";
 
-type Values = BusinessValues & { notes: string; notify_reviews: boolean; notify_comments: boolean; notify_dms: boolean };
+type Values = BusinessValues & { notes: string; notify_reviews: boolean; notify_comments: boolean; notify_dms: boolean; approval_mode: ApprovalMode };
 
-/** Edits the business through RLS: only the columns the web is granted (profile, notes, notify_*). */
+/** Edits the business through RLS: only the columns the web is granted (profile, notes, notify_*, approval_mode). */
 export function SettingsForm({ id, email, initial }: { id: string; email: string | null; initial: Values }) {
   const { t } = useI18n();
   const s = t.settings;
@@ -51,6 +53,7 @@ export function SettingsForm({ id, email, initial }: { id: string; email: string
         notify_reviews: values.notify_reviews,
         notify_comments: values.notify_comments,
         notify_dms: values.notify_dms,
+        approval_mode: values.approval_mode,
       })
       .eq("id", id);
     setSaving(false);
@@ -119,6 +122,11 @@ export function SettingsForm({ id, email, initial }: { id: string; email: string
             </li>
           ))}
         </ul>
+      </section>
+
+      <section aria-labelledby="approval-title" className="grid gap-4 rounded-xl border bg-card p-4 shadow-xs sm:p-6" data-approval-mode>
+        <SectionTitle id="approval-title" title={t.agency.approvalTitle} description={t.agency.approvalSubtitle} />
+        <ApprovalModeField value={values.approval_mode} onChange={(approval_mode) => patch({ approval_mode })} />
       </section>
 
       {email && (

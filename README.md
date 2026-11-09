@@ -1,9 +1,9 @@
-# Dilo
+# Saypost
 
-**Run a local business's social media from WhatsApp.** The owner sends a voice note, a text or a photo; Dilo writes the posts, drafts replies to reviews, comments and DMs, and answers "how are we doing this week?". Nothing goes out until the owner says "yes".
+**Run a local business's social media from WhatsApp.** The owner sends a voice note, a text or a photo; Saypost writes the posts, drafts replies to reviews, comments and DMs, and answers "how are we doing this week?". Nothing goes out until the owner says "yes".
 
-[![CI](https://github.com/Martinez03/dilo/actions/workflows/ci.yml/badge.svg)](https://github.com/Martinez03/dilo/actions/workflows/ci.yml)
-[![License](https://img.shields.io/github/license/Martinez03/dilo)](LICENSE)
+[![CI](https://github.com/Martinez03/saypost/actions/workflows/ci.yml/badge.svg)](https://github.com/Martinez03/saypost/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/Martinez03/saypost)](LICENSE)
 [![Built on Zernio](https://img.shields.io/badge/built%20on-Zernio-111)](https://zernio.com)
 
 <!-- TODO: replace with a demo GIF (voice note → proposal → "Yes" → published post), e.g. docs/assets/demo.gif -->
@@ -14,7 +14,7 @@
 ## Features
 
 - **Voice note to post.** "Today we have stew for 12 € until 4 pm, post it" plus a photo becomes one version per network (Instagram, Facebook, Google Business, LinkedIn, X, TikTok, Threads, Bluesky…), published now or scheduled.
-- **Reviews, comments and DMs.** New ones arrive by webhook; Dilo tells the owner on WhatsApp and proposes a reply in the business's tone.
+- **Reviews, comments and DMs.** New ones arrive by webhook; Saypost tells the owner on WhatsApp and proposes a reply in the business's tone.
 - **"How are we doing?"** Weekly numbers from Zernio Analytics in plain words, with one tip.
 - **Approve with one tap.** Every proposal comes with *Yes / No* buttons in WhatsApp and also shows up in the web dashboard.
 - **Remembers the business.** Opening hours, prices, the way they talk: the owner says it once.
@@ -26,7 +26,7 @@
 flowchart LR
     O([Owner on WhatsApp]) -->|voice note, text, photo| Z1[Zernio webhook]
     N([Reviews, comments, DMs]) -->|new event| Z1
-    Z1 -->|signed HMAC| B[Dilo backend]
+    Z1 -->|signed HMAC| B[Saypost backend]
     B -->|transcribe| T[OpenAI]
     B -->|plan and draft| C[Claude agent]
     C -->|propose_* tool| P[(pending action)]
@@ -65,8 +65,8 @@ More in [SECURITY.md](SECURITY.md).
 You need Node 22, a [Supabase](https://supabase.com) project (cloud or local with the Supabase CLI), and API keys for [Zernio](https://zernio.com), [Anthropic](https://console.anthropic.com) and, for voice notes, [OpenAI](https://platform.openai.com).
 
 ```bash
-git clone https://github.com/Martinez03/dilo.git
-cd dilo
+git clone https://github.com/Martinez03/saypost.git
+cd saypost
 
 # 1. Database: apply the schema to your Supabase project
 npx supabase login
@@ -89,7 +89,7 @@ Without a public URL, Zernio cannot reach your laptop. Two options:
 
 ## Self-hosting
 
-Run your own Dilo for your business or your clients: one server with Docker, one domain, your own keys.
+Run your own Saypost for your business or your clients: one server with Docker, one domain, your own keys.
 
 ```bash
 cp .env.example .env                              # fill it in
@@ -112,7 +112,7 @@ docs/               self-hosting guide; API.md, ESTADO.md, DIARIO.md (internal n
 
 ## Built on Zernio
 
-Dilo was built in one day for [Zernio](https://zernio.com)'s "build something cool on our API" challenge. Everything that touches a social network goes through Zernio: one profile per business, connect links, publishing, the unified inbox, reviews, WhatsApp, analytics and signed webhooks.
+Saypost was built in one day for [Zernio](https://zernio.com)'s "build something cool on our API" challenge. Everything that touches a social network goes through Zernio: one profile per business, connect links, publishing, the unified inbox, reviews, WhatsApp, analytics and signed webhooks.
 
 ## Contributing
 

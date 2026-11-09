@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { CheckCheck, Home, Link2, LogOut, Menu, MessageCircle, Newspaper, Settings, type LucideIcon } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Building2, Check, CheckCheck, ChevronsUpDown, Home, Link2, LogOut, Menu, MessageCircle, Newspaper, Plus, Settings, Users, type LucideIcon } from "lucide-react";
+import { selectBusiness } from "@/app/app/actions";
 import { Logo } from "@/components/brand/logo";
 import { useI18n } from "@/components/i18n-provider";
 import { LangToggle } from "@/components/lang-toggle";
@@ -18,12 +19,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { setApiBusiness } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 // App frame: a sidebar on the grey canvas and the page on a white panel.
 // On phones the sidebar becomes a sheet behind a menu button.
 
-type NavKey = "home" | "approvals" | "posts" | "accounts" | "whatsapp" | "settings";
+type NavKey = "home" | "approvals" | "posts" | "accounts" | "whatsapp" | "settings" | "clients";
 
 const NAV: { key: NavKey; href: string; icon: LucideIcon }[] = [
   { key: "home", href: "/app", icon: Home },
@@ -38,13 +40,75 @@ const navRowClass =
   "relative flex h-9 w-full items-center gap-2.5 overflow-hidden rounded-lg px-3 text-left text-[0.8125rem] font-medium text-sidebar-foreground transition-colors outline-none hover:bg-foreground/[0.045] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-white/[0.06]";
 const activeClass = "bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground dark:hover:bg-sidebar-accent";
 
-type ShellProps = { businessName: string; email: string | null; pending: number };
+type ShellProps = { businessName: string; email: string | null; pending: number; businessId: string; businesses: { id: string; name: string }[] };
 
-function SidebarBody({ businessName, email, pending, onNavigate }: ShellProps & { onNavigate?: () => void }) {
+/** Business switcher: only when the user has more than one business (an agency). */
+function BusinessSwitcher({ businessId, businessName, businesses, onNavigate }: Pick<ShellProps, "businessId" | "businessName" | "businesses"> & { onNavigate?: () => void }) {
   const { t } = useI18n();
+  const g = t.agency;
+  const router = useRouter();
+  const pathname = usePathname();
+  const [switching, startTransition] = useTransition();
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className="-mx-1.5 flex h-8 min-w-0 items-center gap-1.5 rounded-md px-1.5 text-left text-xs font-medium text-foreground/80 outline-none transition-colors hover:bg-foreground/[0.045] focus-visible:ring-2 focus-visible:ring-ring aria-expanded:bg-foreground/[0.045] disabled:opacity-60 dark:hover:bg-white/[0.06]"
+        aria-label={`${g.switcherLabel}: ${businessName}`}
+        disabled={switching}
+        data-business-switcher
+      >
+        <Building2 className="size-3.5 shrink-0 opacity-70" aria-hidden />
+        <span className="min-w-0 flex-1 truncate">{businessName}</span>
+        <ChevronsUpDown className="size-3.5 shrink-0 opacity-60" aria-hidden />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-60" align="start">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>{g.switcherLabel}</DropdownMenuLabel>
+          {businesses.map((b) => (
+            <DropdownMenuItem
+              key={b.id}
+              onClick={() => {
+                if (b.id === businessId) return;
+                onNavigate?.();
+                startTransition(() => selectBusiness(b.id, pathname.startsWith("/app/clients") ? "/app" : pathname));
+              }}
+            >
+              <span className="min-w-0 flex-1 truncate">{b.name}</span>
+              {b.id === businessId && <Check className="ml-auto" aria-label={g.current} />}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => {
+            onNavigate?.();
+            router.push("/app/clients");
+          }}
+        >
+          <Users aria-hidden /> {g.allClients}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => {
+            onNavigate?.();
+            router.push("/app/clients/new");
+          }}
+        >
+          <Plus aria-hidden /> {g.addClient}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function SidebarBody({ businessName, email, pending, businessId, businesses, onNavigate }: ShellProps & { onNavigate?: () => void }) {
+  const { t } = useI18n();
+  const router = useRouter();
   const pathname = usePathname();
   const signOutForm = `signout-${onNavigate ? "sheet" : "side"}`;
   const initial = (email ?? businessName ?? "?").slice(0, 1).toUpperCase();
+  const agency = businesses.length > 1;
+  const nav = agency ? [...NAV.slice(0, 1), { key: "clients" as const, href: "/app/clients", icon: Users }, ...NAV.slice(1)] : NAV;
 
   return (
     <>
@@ -52,18 +116,22 @@ function SidebarBody({ businessName, email, pending, onNavigate }: ShellProps & 
         <Link href="/app" onClick={onNavigate} className="w-fit rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <Logo />
         </Link>
-        <p className="truncate text-xs text-muted-foreground" title={businessName}>
-          {businessName}
-        </p>
+        {agency ? (
+          <BusinessSwitcher businessId={businessId} businessName={businessName} businesses={businesses} onNavigate={onNavigate} />
+        ) : (
+          <p className="truncate text-xs text-muted-foreground" title={businessName}>
+            {businessName}
+          </p>
+        )}
       </div>
 
       <nav aria-label={t.common.menu} className="-mx-2.5 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2.5">
-        {NAV.map(({ key, href, icon: Icon }) => {
+        {nav.map(({ key, href, icon: Icon }) => {
           const active = href === "/app" ? pathname === "/app" : pathname === href || pathname.startsWith(`${href}/`);
           return (
             <Link key={key} href={href} onClick={onNavigate} aria-current={active ? "page" : undefined} className={cn(navRowClass, active && activeClass)}>
               <Icon className={cn("size-4 shrink-0", active ? "text-primary dark:text-primary-ink" : "opacity-85")} aria-hidden />
-              <span className="truncate">{t.nav[key]}</span>
+              <span className="truncate">{key === "clients" ? t.agency.nav : t.nav[key]}</span>
               {key === "approvals" && pending > 0 && (
                 <span className="num ml-auto rounded-full bg-primary px-1.5 text-[0.6875rem] leading-[1.125rem] font-semibold text-primary-foreground">
                   {pending > 99 ? "99+" : pending}
@@ -96,6 +164,16 @@ function SidebarBody({ businessName, email, pending, onNavigate }: ShellProps & 
               <DropdownMenuLabel className="truncate">{email}</DropdownMenuLabel>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
+            {!agency && (
+              <DropdownMenuItem
+                onClick={() => {
+                  onNavigate?.();
+                  router.push("/app/clients/new");
+                }}
+              >
+                <Plus aria-hidden /> {t.agency.addAnother}
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               onClick={() => {
                 const form = document.getElementById(signOutForm);
@@ -113,6 +191,8 @@ function SidebarBody({ businessName, email, pending, onNavigate }: ShellProps & 
 
 export function AppShell({ children, ...props }: ShellProps & { children: ReactNode }) {
   const { t } = useI18n();
+  // Every backend call from this page acts on the business it shows (X-Business-Id).
+  setApiBusiness(props.businessId);
   const [sheetOpen, setSheetOpen] = useState(false);
 
   return (

@@ -1,9 +1,13 @@
 import "server-only";
 import { cache } from "react";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-// The signed-in user and their business, shared by the dashboard layout and pages within one request.
+// The signed-in user and their businesses, shared by the dashboard layout and pages within one request.
+// A user sees every business in their workspaces (RLS); the selected one lives in the `biz` cookie.
+
+export const BIZ_COOKIE = "biz";
 
 export const getSession = cache(async () => {
   const supabase = await createClient();
@@ -17,12 +21,19 @@ export const getSession = cache(async () => {
   };
 });
 
-/** The user's business (one per user), or null before onboarding. */
-export const getBusiness = cache(async () => {
+/** Every business in the user's workspaces, oldest first (the backend defaults to the same first one). */
+export const getBusinesses = cache(async () => {
   const { supabase } = await getSession();
-  const { data, error } = await supabase.from("businesses").select("*").limit(1).maybeSingle();
+  const { data, error } = await supabase.from("businesses").select("*").order("created_at").order("id");
   if (error) throw new Error(error.message);
-  return data;
+  return data ?? [];
+});
+
+/** The selected business (cookie), else the first one; null before onboarding. */
+export const getBusiness = cache(async () => {
+  const [all, jar] = await Promise.all([getBusinesses(), cookies()]);
+  const wanted = jar.get(BIZ_COOKIE)?.value;
+  return all.find((b) => b.id === wanted) ?? all[0] ?? null;
 });
 
 /** The business, or a redirect to onboarding when there isn't one yet. */

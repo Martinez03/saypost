@@ -1,7 +1,7 @@
 // The WhatsApp agent: builds the conversation from the stored messages, runs Claude with the tools,
 // sends its reply and the previews of any proposals it created.
 import type Anthropic from "@anthropic-ai/sdk";
-import { proposeToOwner } from "../actions.js";
+import { deliverProposals } from "../actions.js";
 import { listAccounts, pendingActions, recentMessages, type ActionRow, type Business, type MessageRow } from "../db.js";
 import { t } from "../i18n.js";
 import { claude, textOf } from "../llm.js";
@@ -97,5 +97,5 @@ export async function runAgent(biz: Business): Promise<void> {
   const live = (await pendingActions(biz.id)).filter((p) => created.some((c) => c.id === p.id)).reverse();
 
   if (reply) await sendToOwner(biz, reply);
-  for (const a of live) await proposeToOwner(biz, a);
+  await deliverProposals(biz, live);
 }

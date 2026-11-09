@@ -17,7 +17,7 @@ const POLL_MS = 5000;
 
 type Row = Pick<Message, "id" | "direction" | "kind" | "body" | "media_url" | "created_at">;
 
-/** The WhatsApp thread between the owner (right, green) and Dilo (left), refreshed every 5 s while open. */
+/** The WhatsApp thread between the owner (right, green) and Saypost (left), refreshed every 5 s while open. */
 export function Conversation({ businessId, timeZone }: { businessId: string; timeZone: string }) {
   const { t, lang } = useI18n();
   const w = t.whatsapp;
@@ -83,7 +83,7 @@ export function Conversation({ businessId, timeZone }: { businessId: string; tim
                       mine ? "rounded-tr-sm bg-bubble-out" : "rounded-tl-sm bg-bubble-in",
                     )}
                   >
-                    <span className="sr-only">{mine ? w.you : w.dilo}: </span>
+                    <span className="sr-only">{mine ? w.you : w.saypost}: </span>
                     {m.kind === "image" && m.media_url && (
                       <a href={m.media_url} target="_blank" rel="noopener noreferrer" className="block">
                         <img src={m.media_url} alt={w.image} loading="lazy" className="max-h-60 w-full rounded-lg object-cover" />

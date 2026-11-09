@@ -16,7 +16,7 @@ export const config = {
   webUrl: opt("WEB_URL", "http://localhost:3100").replace(/\/$/, ""),
   /**
    * Extra allowed CORS origins, comma-separated. A `*` matches letters, digits and dashes, e.g.
-   * `https://*--my-dilo.netlify.app` for Netlify deploy previews.
+   * `https://*--my-saypost.netlify.app` for Netlify deploy previews.
    */
   extraOrigins: opt("WEB_ORIGINS")
     .split(",")

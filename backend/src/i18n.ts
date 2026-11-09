@@ -3,7 +3,7 @@ import type { Lang } from "./db.js";
 
 const es = {
   welcome: (name: string) =>
-    `¡Hola! Soy *Dilo* 👋, tu ayudante de redes para *${name}*.\n\nMándame un audio, un texto o una foto con lo que quieras publicar y te preparo los posts. También te aviso de reseñas y comentarios nuevos.\n\nPrueba: _"Publica que hoy tenemos menú del día a 12 €"_ o _"¿Cómo vamos esta semana?"_`,
+    `¡Hola! Soy *Saypost* 👋, tu ayudante de redes para *${name}*.\n\nMándame un audio, un texto o una foto con lo que quieras publicar y te preparo los posts. También te aviso de reseñas y comentarios nuevos.\n\nPrueba: _"Publica que hoy tenemos menú del día a 12 €"_ o _"¿Cómo vamos esta semana?"_`,
   yes: "Sí ✅",
   no: "No ❌",
   askConfirmPublish: "¿Lo publico?",
@@ -29,14 +29,16 @@ const es = {
   postFailed: (platforms: string) => `⚠️ Un post no se pudo publicar en ${platforms}. Míralo en el panel.`,
   otherPending: (n: number) => `(Tienes ${n} propuesta${n === 1 ? "" : "s"} más pendiente${n === 1 ? "" : "s"}: dime "sí" o mírala${n === 1 ? "" : "s"} en el panel.)`,
   evSendFailed: "No se pudo entregar un mensaje de WhatsApp",
-  evAgentError: "Dilo no pudo responder",
+  evAgentError: "Saypost no pudo responder",
   evWhatsappOn: "WhatsApp activado",
   evRejected: (title: string) => `Descartado: ${title}`,
+  agencyReviews: "Recibido 👍 Tu agencia lo revisa y te aviso cuando esté publicado.",
+  agencyDecides: "Eso lo aprueba tu agencia desde su panel. Te aviso en cuanto esté publicado 👍",
 };
 
 const en: typeof es = {
   welcome: (name: string) =>
-    `Hi! I'm *Dilo* 👋, your social media helper for *${name}*.\n\nSend me a voice note, a text or a photo with what you want to post and I'll prepare the posts. I'll also tell you about new reviews and comments.\n\nTry: _"Post that today's lunch menu is €12"_ or _"How are we doing this week?"_`,
+    `Hi! I'm *Saypost* 👋, your social media helper for *${name}*.\n\nSend me a voice note, a text or a photo with what you want to post and I'll prepare the posts. I'll also tell you about new reviews and comments.\n\nTry: _"Post that today's lunch menu is €12"_ or _"How are we doing this week?"_`,
   yes: "Yes ✅",
   no: "No ❌",
   askConfirmPublish: "Shall I post it?",
@@ -62,9 +64,11 @@ const en: typeof es = {
   postFailed: (platforms: string) => `⚠️ A post could not be published on ${platforms}. Check the dashboard.`,
   otherPending: (n: number) => `(You have ${n} more proposal${n === 1 ? "" : "s"} waiting: say "yes" or check the dashboard.)`,
   evSendFailed: "A WhatsApp message could not be delivered",
-  evAgentError: "Dilo could not answer",
+  evAgentError: "Saypost could not answer",
   evWhatsappOn: "WhatsApp activated",
   evRejected: (title: string) => `Dropped: ${title}`,
+  agencyReviews: "Got it 👍 Your agency will review it and I'll let you know once it's posted.",
+  agencyDecides: "Your agency approves that from their dashboard. I'll let you know once it's posted 👍",
 };
 
 export function t(lang: Lang) {

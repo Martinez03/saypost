@@ -22,9 +22,9 @@ export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
   return {
     metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3100"),
-    title: { default: t.meta.title, template: "%s · Dilo" },
+    title: { default: t.meta.title, template: "%s · Saypost" },
     description: t.meta.description,
-    openGraph: { title: t.meta.title, description: t.meta.description, siteName: "Dilo", type: "website" },
+    openGraph: { title: t.meta.title, description: t.meta.description, siteName: "Saypost", type: "website" },
   };
 }
 

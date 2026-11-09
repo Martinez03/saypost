@@ -24,7 +24,7 @@ await app.register(cors, {
     cb(null, isAllowedOrigin(origin));
   },
   methods: ["GET", "POST", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Authorization", "Content-Type"],
+  allowedHeaders: ["Authorization", "Content-Type", "X-Business-Id"],
 });
 
 app.get("/health", async () => ({ ok: true, zernio: !!config.zernioKey, claude: !!config.anthropicKey, transcribe: !!config.openaiKey }));

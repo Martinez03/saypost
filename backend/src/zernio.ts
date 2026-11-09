@@ -1,4 +1,4 @@
-// Thin REST client for the Zernio API (https://zernio.com/openapi.yaml). Only the calls Dilo uses.
+// Thin REST client for the Zernio API (https://zernio.com/openapi.yaml). Only the calls Saypost uses.
 import { randomUUID } from "node:crypto";
 import { config } from "./config.js";
 
@@ -58,7 +58,7 @@ export async function findProfileByExternalId(externalId: string): Promise<ZProf
 
 export async function createProfile(name: string, externalId: string, timezone: string): Promise<ZProfile> {
   const r = await call<{ profile: ZProfile }>("POST", "/profiles", {
-    body: { name, externalId, timezone, description: "Dilo business" },
+    body: { name, externalId, timezone, description: "Saypost business" },
     idempotent: true,
   });
   return r.profile;

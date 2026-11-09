@@ -21,6 +21,7 @@ export function GithubButton({
   locale,
   size = "md",
   className,
+  labelClassName,
 }: {
   href: string;
   label: string;
@@ -30,6 +31,8 @@ export function GithubButton({
   locale: string;
   size?: "md" | "lg";
   className?: string;
+  /** Classes for the visible label, e.g. to hide it on small screens (it stays readable to screen readers). */
+  labelClassName?: string;
 }) {
   const count = stars === null ? null : new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 }).format(stars);
   return (
@@ -45,7 +48,7 @@ export function GithubButton({
     >
       <span className={cn("flex items-center gap-2", size === "md" ? "px-3" : "px-5")}>
         <GithubMark className={size === "lg" ? "size-[1.125rem]" : undefined} />
-        {label}
+        <span className={labelClassName}>{label}</span>
       </span>
       {count !== null && (
         <span

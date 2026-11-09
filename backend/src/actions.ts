@@ -1,5 +1,6 @@
 // Pending actions: everything that publishes, replies or deletes is stored here first and only runs
 // after the owner's "yes" (WhatsApp button/text) or an approval in the dashboard. Enforced in code.
+import { ownerGetsResult, proposalDelivery } from "./approval.js";
 import { addEvent, db, getAction, getBusiness, listAccounts, type ActionKind, type ActionRow, type Business } from "./db.js";
 import { platformName, t } from "./i18n.js";
 import { sendToOwner } from "./whatsapp.js";
@@ -57,8 +58,22 @@ export async function createAction(
   return data as ActionRow;
 }
 
+/**
+ * Tells the owner about new pending actions, as the business's approval mode says (approval.ts):
+ * the preview with Yes/No buttons, a single "your agency reviews it" note, or nothing (dashboard only).
+ */
+export async function deliverProposals(biz: Business, actions: ActionRow[], intro?: string): Promise<void> {
+  let note = false;
+  for (const a of actions) {
+    const how = proposalDelivery(biz.approval_mode, a.source);
+    if (how === "buttons") await proposeToOwner(biz, a, intro);
+    else if (how === "agency_note") note = true;
+  }
+  if (note) await sendToOwner(biz, t(biz.language).agencyReviews);
+}
+
 /** Sends the preview of a pending action to the owner with Yes/No buttons. */
-export async function proposeToOwner(biz: Business, action: ActionRow, intro?: string): Promise<void> {
+async function proposeToOwner(biz: Business, action: ActionRow, intro?: string): Promise<void> {
   const s = t(biz.language);
   const question = action.kind === "publish" ? s.askConfirmPublish : action.kind === "cancel_post" ? s.askConfirmCancel : s.askConfirmReply;
   const body = [intro, action.kind === "publish" ? action.preview : intro ? null : action.preview, question].filter(Boolean).join("\n\n");
@@ -108,14 +123,14 @@ export async function approveAction(id: string, via: "whatsapp" | "dashboard"): 
       .select()
       .single();
     await addEvent(biz.id, `action.done`, row.title, { actionId: row.id, kind: row.kind, ...result });
-    await sendToOwner(biz, summary);
+    if (ownerGetsResult(biz.approval_mode, row.source)) await sendToOwner(biz, summary);
     return { row: data as ActionRow, message: summary };
   } catch (e) {
     const why = e instanceof Error ? e.message : String(e);
     console.error(`[action] ${row.kind} ${row.id} failed: ${why}`);
     const { data } = await db.from("actions").update({ status: "failed", error: why.slice(0, 1000) }).eq("id", row.id).select().single();
     await addEvent(biz.id, "action.failed", row.title, { actionId: row.id, kind: row.kind, error: why.slice(0, 300) });
-    await sendToOwner(biz, s.failed(humanError(why)));
+    if (ownerGetsResult(biz.approval_mode, row.source)) await sendToOwner(biz, s.failed(humanError(why)));
     return { row: data as ActionRow, message: why };
   }
 }
@@ -179,7 +194,7 @@ async function executePublish(biz: Business, p: PublishPayload): Promise<{ resul
     mediaItems: mediaItems.length ? mediaItems : undefined,
     platforms,
     ...(p.scheduleAt ? { scheduledFor: p.scheduleAt, timezone: p.timezone } : { publishNow: true }),
-    metadata: { source: "dilo", businessId: biz.id },
+    metadata: { source: "saypost", businessId: biz.id },
   });
   const post = res.post;
   const links = (post.platforms ?? [])

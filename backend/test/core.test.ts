@@ -67,12 +67,12 @@ test("publish preview groups identical texts and shows timing", () => {
 
 test("CORS origin patterns: `*` stays inside one host label", async () => {
   const { originPattern } = await import("../src/config.js");
-  const previews = originPattern("https://*--my-dilo.netlify.app");
-  assert.ok(previews.test("https://6740abc--my-dilo.netlify.app"));
-  assert.ok(!previews.test("https://evil.com/--my-dilo.netlify.app"));
-  assert.ok(!previews.test("https://x--my-dilo.netlify.app.evil.com"));
-  assert.ok(!previews.test("https://a.b--my-dilo.netlify.app"));
-  assert.ok(!originPattern("https://dilo.example.com").test("https://diloXexample.com"));
+  const previews = originPattern("https://*--my-saypost.netlify.app");
+  assert.ok(previews.test("https://6740abc--my-saypost.netlify.app"));
+  assert.ok(!previews.test("https://evil.com/--my-saypost.netlify.app"));
+  assert.ok(!previews.test("https://x--my-saypost.netlify.app.evil.com"));
+  assert.ok(!previews.test("https://a.b--my-saypost.netlify.app"));
+  assert.ok(!originPattern("https://saypost.example.com").test("https://saypostXexample.com"));
 });
 
 test("the webhook setup script subscribes to exactly the events dispatch() handles", async () => {
@@ -80,4 +80,43 @@ test("the webhook setup script subscribes to exactly the events dispatch() handl
   const script = new URL("../../scripts/setup-zernio-webhook.mjs", import.meta.url).href;
   const { EVENTS } = (await import(script)) as { EVENTS: string[] };
   assert.deepEqual([...EVENTS].sort(), [...WEBHOOK_EVENTS].sort());
+});
+
+test("approval mode routing: owner_whatsapp keeps buttons; agency_dashboard never lets WhatsApp decide", async () => {
+  const { proposalDelivery, ownerCanDecideOnWhatsapp, ownerGetsResult } = await import("../src/approval.js");
+  for (const source of ["whatsapp", "webhook", "dashboard"] as const) {
+    assert.equal(proposalDelivery("owner_whatsapp", source), "buttons", source);
+    assert.equal(ownerGetsResult("owner_whatsapp", source), true, source);
+  }
+  // Unknown or missing values fall back to today's behaviour.
+  assert.equal(proposalDelivery(null, "webhook"), "buttons");
+  assert.equal(proposalDelivery("weird", "whatsapp"), "buttons");
+  assert.equal(ownerCanDecideOnWhatsapp(undefined), true);
+
+  assert.equal(proposalDelivery("agency_dashboard", "whatsapp"), "agency_note");
+  assert.equal(proposalDelivery("agency_dashboard", "webhook"), "none");
+  assert.equal(proposalDelivery("agency_dashboard", "dashboard"), "none");
+  assert.equal(ownerCanDecideOnWhatsapp("agency_dashboard"), false);
+  assert.equal(ownerCanDecideOnWhatsapp("owner_whatsapp"), true);
+  // The owner hears "✅ Posted" for what they asked for, nothing about replies they never saw.
+  assert.equal(ownerGetsResult("agency_dashboard", "whatsapp"), true);
+  assert.equal(ownerGetsResult("agency_dashboard", "webhook"), false);
+});
+
+test("business scope: X-Business-Id must be in the user's workspaces", async () => {
+  const { pickBusiness, canActOn } = await import("../src/scope.js");
+  const a = "aaaaaaaa-0000-4000-8000-000000000001";
+  const b = "bbbbbbbb-0000-4000-8000-000000000002";
+  const other = "cccccccc-0000-4000-8000-000000000003";
+  const mine = [{ id: a }, { id: b }];
+  assert.deepEqual(pickBusiness(mine, undefined), { ok: true, biz: { id: a } });
+  assert.deepEqual(pickBusiness(mine, b), { ok: true, biz: { id: b } });
+  assert.deepEqual(pickBusiness(mine, b.toUpperCase()), { ok: true, biz: { id: b } });
+  assert.deepEqual(pickBusiness(mine, [b, a]), { ok: true, biz: { id: b } });
+  assert.deepEqual(pickBusiness(mine, other), { ok: false, status: 403, error: "forbidden_business" });
+  assert.deepEqual(pickBusiness(mine, "' or 1=1 --"), { ok: false, status: 403, error: "forbidden_business" });
+  assert.deepEqual(pickBusiness([], undefined), { ok: false, status: 404, error: "no_business" });
+  assert.deepEqual(pickBusiness([], a), { ok: false, status: 403, error: "forbidden_business" });
+  assert.equal(canActOn(mine, b), true);
+  assert.equal(canActOn(mine, other), false);
 });

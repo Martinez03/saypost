@@ -6,7 +6,7 @@ import { LangToggle } from "@/components/lang-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import type { Dict } from "@/i18n";
 
-// The sign-up and log-in frame: the form centred, and on wide screens three lines on what Dilo does.
+// The sign-up and log-in frame: the form centred, and on wide screens three lines on what Saypost does.
 
 export function AuthShell({ children, t }: { children: ReactNode; t: Dict }) {
   const perks = [

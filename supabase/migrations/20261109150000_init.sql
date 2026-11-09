@@ -1,4 +1,4 @@
--- Dilo: initial schema. One business per user (MVP). The backend uses the service role;
+-- Saypost: initial schema. One business per user (MVP). The backend uses the service role;
 -- the web reads with the user's session through RLS.
 
 create extension if not exists pgcrypto;
@@ -16,7 +16,7 @@ create table public.businesses (
   tone text not null default 'friendly' check (tone in ('friendly', 'professional', 'fun', 'elegant')),
   language text not null default 'es' check (language in ('es', 'en')),
   timezone text not null default 'Europe/Madrid',
-  notes text not null default '',      -- things Dilo learned from the owner ("no emojis", "closed on Mondays")
+  notes text not null default '',      -- things Saypost learned from the owner ("no emojis", "closed on Mondays")
   owner_phone text unique check (owner_phone ~ '^[0-9]{8,15}$'),  -- digits-only E.164
   whatsapp_status text not null default 'inactive' check (whatsapp_status in ('inactive', 'pending', 'active')),
   whatsapp_conversation_id text,
@@ -49,7 +49,7 @@ create table public.social_accounts (
 create index social_accounts_business_idx on public.social_accounts (business_id);
 
 -- ---------------------------------------------------------------------------
--- messages: the WhatsApp conversation between the owner and Dilo
+-- messages: the WhatsApp conversation between the owner and Saypost
 -- ---------------------------------------------------------------------------
 create table public.messages (
   id bigint generated always as identity primary key,

@@ -1,13 +1,13 @@
-# Dilo
+# Saypost
 
-**Las redes sociales de un negocio local, desde WhatsApp.** El dueño manda un audio, un texto o una foto; Dilo escribe los posts, propone respuestas a reseñas, comentarios y DMs, y contesta "¿cómo vamos esta semana?". Nada sale sin que el dueño diga "sí".
+**Las redes sociales de un negocio local, desde WhatsApp.** El dueño manda un audio, un texto o una foto; Saypost escribe los posts, propone respuestas a reseñas, comentarios y DMs, y contesta "¿cómo vamos esta semana?". Nada sale sin que el dueño diga "sí".
 
 [English](README.md) · [Guía de autoalojamiento (inglés)](docs/SELF_HOSTING.md) · [Contribuir](CONTRIBUTING.md) · [Seguridad](SECURITY.md)
 
 ## Qué hace
 
 - **Del audio al post.** "Hoy tenemos cocido a 12 € hasta las 4, publícalo" y una foto se convierten en una versión por red (Instagram, Facebook, Google Business, LinkedIn, X, TikTok…), al momento o programada.
-- **Reseñas, comentarios y DMs.** Llegan por webhook; Dilo avisa al dueño por WhatsApp y le propone la respuesta con el tono del negocio.
+- **Reseñas, comentarios y DMs.** Llegan por webhook; Saypost avisa al dueño por WhatsApp y le propone la respuesta con el tono del negocio.
 - **"¿Cómo vamos?"** Las cifras de la semana de Zernio Analytics, en cristiano y con un consejo.
 - **Aprobar con un toque.** Cada propuesta llega con los botones *Sí / No* y también aparece en el panel web.
 - **Panel bilingüe** (español / inglés): aprobaciones, publicaciones, cuentas, la conversación de WhatsApp y ajustes.
@@ -25,7 +25,7 @@ Las herramientas del agente **solo proponen**: escriben una fila en `actions` co
 ## Empezar
 
 ```bash
-git clone https://github.com/Martinez03/dilo.git && cd dilo
+git clone https://github.com/Martinez03/saypost.git && cd saypost
 npx supabase link --project-ref <tu-proyecto> && npx supabase db push
 cp backend/.env.example backend/.env.local && cp web/.env.example web/.env.local   # rellénalos
 cd backend && npm install && npm run dev      # http://localhost:4100
@@ -36,7 +36,7 @@ Para tu propio servidor con Docker, dominio y HTTPS: `cp .env.example .env`, `do
 
 ## Hecho sobre Zernio
 
-Dilo se construyó en un día para el reto de [Zernio](https://zernio.com). Todo lo que toca una red social pasa por su API: perfiles, enlaces de conexión, publicación, bandeja, reseñas, WhatsApp, analítica y webhooks firmados.
+Saypost se construyó en un día para el reto de [Zernio](https://zernio.com). Todo lo que toca una red social pasa por su API: perfiles, enlaces de conexión, publicación, bandeja, reseñas, WhatsApp, analítica y webhooks firmados.
 
 ## Licencia
 

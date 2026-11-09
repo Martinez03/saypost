@@ -1,4 +1,4 @@
-// Hand-written from supabase/migrations/20261109150000_init.sql (only the tables the web reads or writes).
+// Hand-written from supabase/migrations/ (init + workspaces) (only the tables the web reads or writes).
 // Insert/Update list only the columns the `authenticated` role is granted, so a forbidden write fails to compile.
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
@@ -6,6 +6,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Tone = "friendly" | "professional" | "fun" | "elegant";
 export type BusinessLanguage = "es" | "en";
 export type WhatsappStatus = "inactive" | "pending" | "active";
+export type ApprovalMode = "owner_whatsapp" | "agency_dashboard";
 export type ActionKind = "publish" | "reply_review" | "reply_comment" | "reply_dm" | "cancel_post" | "boost";
 export type ActionStatus = "pending" | "approved" | "rejected" | "done" | "failed" | "superseded";
 export type MessageKind = "text" | "audio" | "image" | "video" | "system";
@@ -17,6 +18,8 @@ export type Database = {
         Row: {
           id: string;
           owner_id: string;
+          workspace_id: string;
+          approval_mode: ApprovalMode;
           name: string;
           category: string | null;
           city: string | null;
@@ -39,6 +42,8 @@ export type Database = {
         };
         Insert: {
           owner_id: string;
+          workspace_id?: string;
+          approval_mode?: ApprovalMode;
           name: string;
           category?: string | null;
           city?: string | null;
@@ -59,6 +64,7 @@ export type Database = {
           notify_comments?: boolean;
           notify_reviews?: boolean;
           notify_dms?: boolean;
+          approval_mode?: ApprovalMode;
         };
         Relationships: [];
       };

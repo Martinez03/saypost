@@ -1,11 +1,14 @@
 import type { ReactNode } from "react";
 import { Familjen_Grotesk } from "next/font/google";
+import { BRAND_NAMES, BrandIcon, NETWORKS, ZernioIcon, ZernioLogo } from "@/components/landing/brand-icons";
 import { ChatMock } from "@/components/landing/chat-mock";
 import { CopyCommand } from "@/components/landing/copy-command";
 import { GITHUB_URL, getGithubStars, githubFile } from "@/components/landing/github";
 import { GithubButton } from "@/components/landing/github-button";
 import {
   ApprovalGate,
+  ForAgency,
+  ForBusiness,
   PostsEverywhere,
   ReviewReply,
   StepLive,
@@ -60,6 +63,10 @@ export default async function LandingPage() {
     <StepLive key="live" />,
   ];
   const postText = l.chat.draftText.split("\n")[0];
+  const audiences = [
+    { id: "negocios", ...l.audience.business, href: "#como-funciona", ill: <ForBusiness yes={l.how.yes} /> },
+    { id: "agencias", ...l.audience.agency, href: "#instalar", ill: <ForAgency yes={l.how.yes} /> },
+  ];
   const features = [
     { ...l.does.posts, ill: <PostsEverywhere /> },
     { ...l.does.inbox, ill: <ReviewReply yes={l.how.yes} no={l.how.no} /> },
@@ -90,6 +97,12 @@ export default async function LandingPage() {
                   {l.hero.secondary}
                 </a>
               </div>
+              <p className="mt-7 text-pretty text-muted-foreground">
+                {l.audience.heroQuestion}{" "}
+                <a href="#agencias" className="font-medium text-foreground underline decoration-foreground/25 underline-offset-4 hover:decoration-foreground">
+                  {l.audience.heroLink}
+                </a>
+              </p>
             </div>
             <div className="lg:col-span-6">
               <div className="relative flex justify-center rounded-[2rem] bg-canvas px-4 py-6 sm:px-10 sm:py-8 xl:justify-start xl:pl-10">
@@ -101,6 +114,70 @@ export default async function LandingPage() {
                   {l.hero.noteYes}
                 </Note>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Integrations: WhatsApp in, every network out, all through Zernio */}
+        <section aria-labelledby="integrations-title" className="border-t">
+          <h2 id="integrations-title" className="sr-only">
+            {l.integrations.title}
+          </h2>
+          <div className={cn(WRAP, "grid gap-10 py-10 lg:grid-cols-[auto_1fr_auto] lg:items-center lg:gap-0 lg:divide-x lg:py-12")}>
+            <div className="grid gap-3 lg:pr-10">
+              <p className="text-sm text-muted-foreground">{l.integrations.whatsapp}</p>
+              <p className="flex items-center gap-2.5 font-medium">
+                <BrandIcon id="whatsapp" className="size-7" />
+                {BRAND_NAMES.whatsapp}
+              </p>
+            </div>
+            <div className="grid gap-4 lg:px-10">
+              <p className="text-sm text-muted-foreground">{l.integrations.networks}</p>
+              <ul className="grid grid-cols-5 gap-x-3 gap-y-5 sm:gap-x-4 lg:grid-cols-10">
+                {NETWORKS.map((id) => (
+                  <li key={id} className="grid justify-items-center gap-2 text-center">
+                    <BrandIcon id={id} className="size-6 text-foreground/85" />
+                    <span className="text-xs leading-tight text-muted-foreground">{BRAND_NAMES[id]}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="grid gap-3 lg:pl-10">
+              <p className="text-sm text-muted-foreground">{l.integrations.zernio}</p>
+              <a href="https://zernio.com" target="_blank" rel="noopener noreferrer" className="flex w-fit items-center gap-2.5 rounded-md">
+                <ZernioIcon className="size-7" />
+                <ZernioLogo mark={false} className="h-[1.05rem]" />
+              </a>
+            </div>
+          </div>
+        </section>
+
+        {/* One business or many: the two ways in */}
+        <section id="para-quien" aria-labelledby="audience-title" className="scroll-mt-16 bg-canvas">
+          <div className={cn(WRAP, "py-16 lg:py-24")}>
+            <div className="grid gap-5 lg:grid-cols-12 lg:items-end lg:gap-8">
+              <h2 id="audience-title" className={cn(H2, "lg:col-span-6")}>
+                {l.audience.title}
+              </h2>
+              <p className={cn(LEAD, "max-w-[34rem] lg:col-span-5 lg:col-start-8")}>{l.audience.subtitle}</p>
+            </div>
+            <div className="mt-10 grid gap-4 md:grid-cols-2 lg:mt-14 lg:gap-5">
+              {audiences.map((a) => (
+                <article
+                  key={a.id}
+                  id={a.id}
+                  className="grid scroll-mt-20 content-start gap-6 rounded-3xl border bg-card p-6 sm:p-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-center lg:gap-7"
+                >
+                  <div className="w-full max-w-[24rem]">{a.ill}</div>
+                  <div>
+                    <h3 className={H3}>{a.title}</h3>
+                    <p className="mt-2 text-pretty text-muted-foreground">{a.text}</p>
+                    <a href={a.href} className="mt-4 inline-block font-medium text-primary-ink underline decoration-primary/30 underline-offset-4 hover:decoration-primary">
+                      {a.link}
+                    </a>
+                  </div>
+                </article>
+              ))}
             </div>
           </div>
         </section>
@@ -189,6 +266,9 @@ export default async function LandingPage() {
         <section id="zernio" aria-labelledby="zernio-title" className="scroll-mt-16 border-t">
           <div className={cn(WRAP, "grid gap-12 py-16 lg:grid-cols-12 lg:gap-8 lg:py-24")}>
             <div className="lg:col-span-5">
+              <a href="https://zernio.com" target="_blank" rel="noopener noreferrer" className="mb-7 flex w-fit rounded-xl" aria-label="zernio.com">
+                <ZernioIcon className="size-12" />
+              </a>
               <h2 id="zernio-title" className={H2}>
                 {l.zernio.title}
               </h2>
@@ -205,7 +285,7 @@ export default async function LandingPage() {
             </div>
             <figure className="min-w-0 lg:col-span-7 lg:self-end">
               <figcaption className="text-sm font-medium text-muted-foreground">{l.zernio.codeCaption}</figcaption>
-              <pre className="mt-3 overflow-x-auto rounded-2xl bg-[var(--code-bg)] p-5 font-mono text-[0.8125rem] leading-relaxed text-[var(--code-ink)] sm:p-6">
+              <pre className="mt-3 overflow-x-auto rounded-2xl border border-[var(--code-edge)] bg-[var(--code-bg)] p-5 font-mono text-[0.8125rem] leading-relaxed text-[var(--code-ink)] sm:p-6">
                 <code>
                   <span className="text-[var(--code-key)]">curl</span> -X POST https://zernio.com/api/v1/posts \{"\n"}
                   {"  "}-H <span className="text-[var(--code-str)]">&quot;Authorization: Bearer $ZERNIO_API_KEY&quot;</span> \{"\n"}

@@ -26,7 +26,7 @@ export function CopyCommand({ command }: { command: string }) {
   }
 
   return (
-    <div className="flex items-center gap-2 rounded-xl bg-[var(--code-bg)] py-1.5 pr-1.5 pl-4 font-mono text-[0.8125rem] text-[var(--code-ink)]">
+    <div className="flex items-center gap-2 rounded-xl border border-[var(--code-edge)] bg-[var(--code-bg)] py-1.5 pr-1.5 pl-4 font-mono text-[0.8125rem] text-[var(--code-ink)]">
       <code className="min-w-0 flex-1 overflow-x-auto py-1.5 whitespace-nowrap [scrollbar-width:none]">
         <span className="text-[var(--code-dim)] select-none">$ </span>
         {command}

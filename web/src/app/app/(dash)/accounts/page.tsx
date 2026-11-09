@@ -9,10 +9,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AccountsPage({ searchParams }: { searchParams: Promise<{ connected?: string | string[] }> }) {
-  const [, { supabase }, params] = await Promise.all([requireBusiness(), getSession(), searchParams]);
+  const [business, { supabase }, params] = await Promise.all([requireBusiness(), getSession(), searchParams]);
   const { data, error } = await supabase
     .from("social_accounts")
     .select("id, platform, username, display_name, profile_picture, status")
+    .eq("business_id", business.id)
     .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
 

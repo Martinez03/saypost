@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// Registers Dilo's webhook in your Zernio account, or updates it if one already points to the same URL
+// Registers Saypost's webhook in your Zernio account, or updates it if one already points to the same URL
 // (POST / PUT /v1/webhooks/settings with the URL, the signing secret and the events the backend handles).
 // Prints only non-secret information: never the API key or the webhook secret.
 //
 // Usage (Node 22+, from the repo root):
-//   node scripts/setup-zernio-webhook.mjs [--env-file .env] [--url https://dilo.example.com/webhooks/zernio]
-//                                         [--name Dilo] [--test] [--dry-run]
+//   node scripts/setup-zernio-webhook.mjs [--env-file .env] [--url https://saypost.example.com/webhooks/zernio]
+//                                         [--name Saypost] [--test] [--dry-run]
 //
 // ZERNIO_API_KEY and ZERNIO_WEBHOOK_SECRET come from the environment or from the env file (default: the
 // first of .env, backend/.env.local, backend/.env that exists). Without --url the script uses
@@ -87,7 +87,7 @@ async function main() {
   const secret = get("ZERNIO_WEBHOOK_SECRET");
   const base = (get("ZERNIO_API_BASE") || "https://zernio.com/api/v1").replace(/\/+$/, "");
   const apiUrl = (get("API_URL") || get("PUBLIC_API_URL")).replace(/\/+$/, "");
-  const name = args.name ?? "Dilo";
+  const name = args.name ?? "Saypost";
 
   if (!key) fail("ZERNIO_API_KEY is not set (environment or env file).");
   if (!secret) {

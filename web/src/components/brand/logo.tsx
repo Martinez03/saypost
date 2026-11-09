@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-// Dilo's mark: a speech bubble holding a short voice waveform. Drawn in the bright brand green;
+// Saypost's mark: a speech bubble holding a short voice waveform. Drawn in the bright brand green;
 // the bars are white so it reads on light and dark surfaces alike.
 
 export function LogoMark({ className }: { className?: string }) {
@@ -24,7 +24,7 @@ export function Logo({ className, markClassName }: { className?: string; markCla
   return (
     <span className={cn("inline-flex items-center gap-2 text-[1.0625rem] font-semibold tracking-[-0.03em]", className)}>
       <LogoMark className={markClassName} />
-      <span>Dilo</span>
+      <span>Saypost</span>
     </span>
   );
 }

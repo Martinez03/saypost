@@ -1,4 +1,4 @@
-# Caddy in front of Dilo (docker compose --profile caddy). One domain for everything, HTTPS automatic:
+# Caddy in front of Saypost (docker compose --profile caddy). One domain for everything, HTTPS automatic:
 # point DOMAIN's DNS (A/AAAA record) at this server and open ports 80 and 443.
 # The backend owns /api/*, /webhooks/* and /health; the Next.js web has no routes there.
 {$DOMAIN} {

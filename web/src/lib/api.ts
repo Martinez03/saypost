@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 
-// Calls the Dilo backend (NEXT_PUBLIC_API_URL) as the signed-in user. Browser only.
+// Calls the Saypost backend (NEXT_PUBLIC_API_URL) as the signed-in user. Browser only.
 // Errors come back as { error, message } (docs/API.md); network failures use error "network".
 
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4100").replace(/\/+$/, "");
@@ -18,6 +18,14 @@ export class ApiError extends Error {
 
 type Method = "GET" | "POST" | "DELETE";
 
+// The business the dashboard is showing. The app shell sets it on render, so every call acts on
+// the same business as the page (the backend checks it belongs to the user's workspaces).
+let currentBusinessId: string | null = null;
+
+export function setApiBusiness(id: string | null) {
+  currentBusinessId = id;
+}
+
 export async function api<T>(path: string, options: { method?: Method; body?: unknown; timeoutMs?: number } = {}): Promise<T> {
   const { body, timeoutMs = 30_000 } = options;
   const method = options.method ?? (body === undefined ? "GET" : "POST");
@@ -30,6 +38,7 @@ export async function api<T>(path: string, options: { method?: Method; body?: un
       method,
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(currentBusinessId ? { "X-Business-Id": currentBusinessId } : {}),
         // No Content-Type without a body: Fastify rejects an empty JSON body.
         ...(body === undefined ? {} : { "Content-Type": "application/json" }),
       },
@@ -53,6 +62,19 @@ export const apiDelete = <T>(path: string) => api<T>(path, { method: "DELETE" })
 // ---------------------------------------------------------------------------
 // Response types (docs/API.md)
 // ---------------------------------------------------------------------------
+
+export type BusinessSummary = {
+  id: string;
+  name: string;
+  category: string | null;
+  city: string | null;
+  language: "es" | "en";
+  workspaceId: string;
+  approvalMode: "owner_whatsapp" | "agency_dashboard";
+  whatsappStatus: "inactive" | "pending" | "active";
+  connectedAccounts: number;
+  pendingActions: number;
+};
 
 export type WhatsappStatusResponse = {
   status: "inactive" | "pending" | "active";

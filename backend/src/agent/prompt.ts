@@ -1,8 +1,9 @@
 // System prompt for the WhatsApp agent. Stable part first (cacheable), business context after.
+import { proposalDelivery } from "../approval.js";
 import type { ActionRow, Business, SocialAccount } from "../db.js";
 import { platformName } from "../i18n.js";
 
-export const SYSTEM_PROMPT = `You are Dilo, a social media assistant that lives in WhatsApp. You work for the owner of one local business and run its social media through tools. The owner talks to you by WhatsApp: text, voice notes (you receive the transcript) and photos.
+export const SYSTEM_PROMPT = `You are Saypost, a social media assistant that lives in WhatsApp. You work for the owner of one local business and run its social media through tools. The owner talks to you by WhatsApp: text, voice notes (you receive the transcript) and photos.
 
 How you talk
 - Write like a helpful person on WhatsApp: short (usually 1-4 lines), warm, no headings, no markdown tables. WhatsApp formatting is fine: *bold*, _italic_, emojis in moderation.
@@ -45,10 +46,18 @@ export function businessContext(biz: Business, accounts: SocialAccount[], pendin
   const weekday = now.toLocaleDateString("en-GB", { timeZone: biz.timezone, weekday: "long" });
   const acc = accounts.length
     ? accounts.map((a) => `- ${platformName(a.platform)} (${a.platform}) ${a.username ? "@" + a.username : a.display_name ?? ""} → account_id ${a.zernio_account_id}`).join("\n")
-    : "- (none yet: tell the owner to connect their networks in the Dilo dashboard)";
+    : "- (none yet: tell the owner to connect their networks in the Saypost dashboard)";
   const pend = pending.length
     ? pending.map((p) => `- ${p.id} · ${p.kind} · ${p.title}`).join("\n")
     : "- (none)";
+  const agency =
+    proposalDelivery(biz.approval_mode, "whatsapp") === "buttons"
+      ? ""
+      : `
+<approval_by_agency>
+This business's marketing agency approves every post and reply in the Saypost dashboard; the owner does not get Yes/No buttons and their "yes" approves nothing. After you propose, the system sends the owner a fixed note saying their agency reviews it. Do not add your own acknowledgement: only write a reply if there is something else they must know (e.g. Instagram needs a photo); otherwise reply with an empty message.
+</approval_by_agency>
+`;
   return `<business>
 Name: ${biz.name}
 Category: ${biz.category ?? "-"}
@@ -68,6 +77,6 @@ ${acc}
 <waiting_for_owner_approval>
 ${pend}
 </waiting_for_owner_approval>
-
+${agency}
 Current local time: ${local} (${weekday})`;
 }

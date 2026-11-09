@@ -1,14 +1,14 @@
-# Dilo
+# Saypost
 
 ## Qué es
-Un agente que lleva las redes sociales de un negocio local **desde WhatsApp**. El dueño manda un audio, un texto o una foto y Dilo:
+Un agente que lleva las redes sociales de un negocio local **desde WhatsApp**. El dueño manda un audio, un texto o una foto y Saypost:
 - escribe y publica los posts (Instagram, Facebook, Google Business, LinkedIn, X, TikTok…);
 - avisa de reseñas, comentarios y DMs nuevos y propone la respuesta;
 - contesta preguntas como "¿cómo vamos esta semana?" con las métricas.
 
 Nada que publique, responda o gaste se ejecuta sin que el dueño diga "sí" en WhatsApp o lo apruebe en el dashboard.
 
-Todo pasa por la API de **Zernio** (publicación, bandeja, reseñas, WhatsApp, analítica). Se construyó el 2026-11-09 como respuesta al reto de Zernio. Es código abierto y autoalojable: `README.md` y `docs/SELF_HOSTING.md`.
+Todo pasa por la API de **Zernio** (publicación, bandeja, reseñas, WhatsApp, analítica). Se construyó el 2026-11-09 como respuesta al reto de Zernio. Se llamaba **Dilo** hasta ese mismo día: el usuario de prueba `demo@dilo.test` y algunos identificadores de la instalación conservan el nombre antiguo a propósito. Es código abierto y autoalojable: `README.md` y `docs/SELF_HOSTING.md`.
 
 - Estado actual y pendientes: `docs/ESTADO.md`. **Léelo al empezar.**
 - Contrato entre web y backend, esquema de datos y flujos: `docs/API.md`.

@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
+import { BRAND_NAMES, BrandGlyph, type BrandId } from "@/components/landing/brand-icons";
 import { cn } from "@/lib/utils";
 
-// Dilo's landing illustrations, drawn by hand as inline SVG in one style (see landing.css, "Illustration
+// Saypost's landing illustrations, drawn by hand as inline SVG in one style (see landing.css, "Illustration
 // strokes"): 1.5px round ink lines, flat paper and well fills, warm for food photos, green only for the
 // owner's "yes" and for what went live. Colours come from CSS variables, so light and dark both work.
 // They are decorative: the text next to each one carries the meaning, so every SVG is aria-hidden.
@@ -139,26 +140,24 @@ export function StepYes({ yes }: { yes: string }) {
 }
 
 export function StepLive() {
-  const tiles = [
-    { x: 16, y: 18, g: "IG" },
-    { x: 104, y: 18, g: "f" },
-    { x: 16, y: 78, g: "G" },
-    { x: 104, y: 78, g: "in" },
+  const tiles: { x: number; y: number; id: BrandId }[] = [
+    { x: 16, y: 18, id: "instagram" },
+    { x: 104, y: 18, id: "facebook" },
+    { x: 16, y: 78, id: "googlebusiness" },
+    { x: 104, y: 78, id: "linkedin" },
   ];
   return (
     <Ill viewBox="0 0 120 96">
       {tiles.map((t) => (
-        <path key={t.g} className="ink-thin dashed" d={`M60 48 L${t.x} ${t.y}`} />
+        <path key={t.id} className="ink-thin dashed" d={`M60 48 L${t.x} ${t.y}`} />
       ))}
       <rect className="paper" x="44" y="30" width="32" height="36" rx="5" />
       <rect className="warm" x="48" y="34" width="24" height="14" rx="2" />
       <path className="ink" d="M49 54 H71 M49 60 H65" />
       {tiles.map((t) => (
-        <g key={t.g}>
+        <g key={t.id}>
           <circle cx={t.x} cy={t.y} r="11" className="paper" />
-          <text x={t.x} y={t.y + 3.5} textAnchor="middle" className="label" style={{ fontSize: 9.5, fontWeight: 600 }}>
-            {t.g}
-          </text>
+          <BrandGlyph id={t.id} x={t.x - 6} y={t.y - 6} size={12} className="ink-fill" />
         </g>
       ))}
       <CheckBadge x={76} y={30} />
@@ -168,21 +167,21 @@ export function StepLive() {
 
 // ---------------------------------------------------------------- what it does
 
-const NETWORKS = [
-  { name: "Instagram", g: "IG", x: 300 },
-  { name: "Facebook", g: "f", x: 318 },
-  { name: "Google Business", g: "G", x: 294 },
-  { name: "LinkedIn", g: "in", x: 326 },
-  { name: "X", g: "X", x: 308 },
-  { name: "TikTok", g: "TT", x: 290 },
+const FANOUT: { id: BrandId; x: number }[] = [
+  { id: "instagram", x: 300 },
+  { id: "facebook", x: 318 },
+  { id: "googlebusiness", x: 294 },
+  { id: "linkedin", x: 326 },
+  { id: "x", x: 308 },
+  { id: "tiktok", x: 290 },
 ];
 
 export function PostsEverywhere() {
   return (
     <Ill viewBox="0 0 500 250">
-      {NETWORKS.map((n, i) => {
+      {FANOUT.map((n, i) => {
         const y = 22 + i * 41;
-        return <path key={n.name} className="ink-thin" d={`M176 128 C 236 128, 236 ${y}, ${n.x} ${y}`} />;
+        return <path key={n.id} className="ink-thin" d={`M176 128 C 236 128, 236 ${y}, ${n.x} ${y}`} />;
       })}
       <rect className="paper" x="20" y="34" width="156" height="184" rx="12" />
       <rect className="warm" x="30" y="44" width="136" height="80" rx="6" />
@@ -190,18 +189,16 @@ export function PostsEverywhere() {
       <path className="ink" d="M32 142 H158 M32 153 H140 M32 164 H118" />
       <path className="ink" d="M36 196 c-2.6 -3.4 -8.4 -1.2 -6 3.4 l6 5.4 l6 -5.4 c2.4 -4.6 -3.4 -6.8 -6 -3.4 Z" />
       <path className="ink" d="M54 191 h12 a3 3 0 0 1 3 3 v6 a3 3 0 0 1 -3 3 h-8 l-4 3 v-3 a3 3 0 0 1 -3 -3 v-6 a3 3 0 0 1 3 -3 Z" />
-      {NETWORKS.map((n, i) => {
+      {FANOUT.map((n, i) => {
         const y = 22 + i * 41;
-        const w = 60 + n.name.length * 6.8;
+        const name = BRAND_NAMES[n.id];
+        const w = 58 + name.length * 6.8;
         return (
-          <g key={n.name}>
+          <g key={n.id}>
             <rect className="paper" x={n.x} y={y - 14} width={w} height="28" rx="14" />
-            <circle cx={n.x + 14} cy={y} r="9" className="well" />
-            <text x={n.x + 14} y={y + 3.2} textAnchor="middle" className="label" style={{ fontSize: 8.5, fontWeight: 600 }}>
-              {n.g}
-            </text>
-            <text x={n.x + 29} y={y + 4} className="label">
-              {n.name}
+            <BrandGlyph id={n.id} x={n.x + 8} y={y - 7} size={14} className="ink-fill" />
+            <text x={n.x + 28} y={y + 4} className="label">
+              {name}
             </text>
             <CheckBadge x={n.x + w - 14} y={y} r={6} />
           </g>
@@ -235,7 +232,7 @@ export function ReviewReply({ yes, no }: { yes: string; no: string }) {
   );
 }
 
-/** The owner asks how the week went; Dilo answers in plain text (reach, reactions, reviews), not a chart. */
+/** The owner asks how the week went; Saypost answers in plain text (reach, reactions, reviews), not a chart. */
 export function WeeklyMetrics({ question }: { question: string }) {
   const qw = Math.min(26 + question.length * 6.1, 292);
   return (
@@ -254,6 +251,100 @@ export function WeeklyMetrics({ question }: { question: string }) {
       <path d={star(40, 155, 7)} className="star" />
       <path className="ink" d="M62 152 H196" />
       <path className="ink-thin" d="M62 163 H168" />
+    </Ill>
+  );
+}
+
+// ---------------------------------------------------------------- one business or many
+
+/** A corner shop with a striped awning, drawn in a 100x100 box. */
+function Shop({ transform }: { transform: string }) {
+  return (
+    <g transform={transform} className="keep-stroke">
+      <path className="ink-thin" d="M0 96 H100" />
+      <rect className="paper" x="12" y="44" width="76" height="52" />
+      <rect className="paper" x="20" y="56" width="30" height="26" rx="2" />
+      <path className="ink-thin" d="M35 56 V82 M20 69 H50" />
+      <rect className="well" x="58" y="56" width="22" height="40" rx="2" stroke="var(--ill-ink)" strokeWidth="1.5" />
+      <path className="warm" stroke="var(--ill-ink)" strokeWidth="1.5" strokeLinejoin="round" d={`M4 26 H96 L90 44 ${"q-5 7 -10 0 ".repeat(8)}Z`} />
+      <path className="ink-thin" d="M27 26 L26 44 M50 26 V44 M73 26 L74 44" />
+      <rect className="paper" x="26" y="8" width="48" height="14" rx="3" />
+      <path className="ink" d="M36 15 H64" />
+    </g>
+  );
+}
+
+export function ForBusiness({ yes }: { yes: string }) {
+  const bars = [8, 14, 20, 10, 16, 24, 12, 8, 18, 12, 20, 9, 14, 7];
+  return (
+    <Ill viewBox="0 0 320 170">
+      <Shop transform="translate(14 22) scale(1.22)" />
+      <path className="ink-thin dashed" d="M136 96 C 150 96, 152 64, 164 62" />
+      <path
+        className="accent-soft"
+        stroke="var(--ill-ink)"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+        d="M178 42 H296 L306 36 L304 48 V70 A12 12 0 0 1 292 82 H178 A12 12 0 0 1 166 70 V54 A12 12 0 0 1 178 42 Z"
+      />
+      <circle cx="186" cy="62" r="9" className="primary" />
+      <path d="M183 57.5 L190.5 62 L183 66.5 Z" className="on-primary" />
+      {bars.map((h, i) => (
+        <line key={i} className="bar" x1={204 + i * 6.4} x2={204 + i * 6.4} y1={62 - h / 2} y2={62 + h / 2} />
+      ))}
+      <path
+        className="accent-soft"
+        stroke="var(--ill-ink)"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+        d="M242 104 H296 L306 98 L304 110 V128 A10 10 0 0 1 294 138 H242 A10 10 0 0 1 232 128 V114 A10 10 0 0 1 242 104 Z"
+      />
+      <text x="246" y="126" className="label" style={{ fontSize: 15, fontWeight: 600 }}>
+        {yes}
+      </text>
+      <path className="accent-line" d="M276 120 l4 4.5 l9 -10" style={{ strokeWidth: 2 }} />
+    </Ill>
+  );
+}
+
+/** Several clients' shops feed one approval queue; some rows the agency approves, others the client does on WhatsApp. */
+export function ForAgency({ yes }: { yes: string }) {
+  const rows = [
+    { y: 62, by: "agency" },
+    { y: 102, by: "client" },
+    { y: 142, by: "agency" },
+  ] as const;
+  return (
+    <Ill viewBox="0 0 320 170">
+      {rows.map((r, i) => (
+        <path key={r.y} className="ink-thin dashed" d={`M56 ${16 + i * 52 + 24} C 100 ${16 + i * 52 + 24}, 110 ${r.y}, 150 ${r.y}`} />
+      ))}
+      {rows.map((r, i) => (
+        <Shop key={r.y} transform={`translate(10 ${12 + i * 52}) scale(0.46)`} />
+      ))}
+      <rect className="paper" x="150" y="12" width="158" height="152" rx="10" />
+      <path className="ink" d="M166 30 H222" />
+      <path className="ink-thin" d="M150 42 H308 M150 82 H308 M150 122 H308" />
+      {rows.map((r) => (
+        <g key={r.y}>
+          <circle cx="170" cy={r.y} r="9" className="warm" stroke="var(--ill-ink)" strokeWidth="1.5" />
+          <path className="ink" d={`M186 ${r.y - 4} H236`} />
+          <path className="ink-thin" d={`M186 ${r.y + 6} H222`} />
+          {r.by === "agency" ? (
+            <g>
+              <rect className="primary" x="258" y={r.y - 11} width="38" height="22" rx="6" />
+              <text x="277" y={r.y + 4} textAnchor="middle" className="label" style={{ fill: "var(--primary-foreground)", fontWeight: 600 }}>
+                {yes}
+              </text>
+            </g>
+          ) : (
+            <g>
+              <rect x="258" y={r.y - 11} width="38" height="22" rx="6" fill="none" className="ink-thin dashed" />
+              <BrandGlyph id="whatsapp" x={270} y={r.y - 7} size={14} className="ink-fill" />
+            </g>
+          )}
+        </g>
+      ))}
     </Ill>
   );
 }

@@ -3,16 +3,21 @@
 // Usage: npx tsx --env-file=.env.local scripts/simulate.ts text "Publica que hoy hay cocido a 12 €"
 //        npx tsx --env-file=.env.local scripts/simulate.ts review
 //        npx tsx --env-file=.env.local scripts/simulate.ts yes
+// Another business (it must already have that owner_phone): SIM_PHONE=34600000002 SIM_CONV=sim_conv2 …
+// SIM_API defaults to the backend's PORT from the env file.
 import { createHmac, randomUUID } from "node:crypto";
 import { db } from "../src/db.js";
 
-const API = process.env.SIM_API ?? "http://localhost:4100";
-const PHONE = "34600000001";
+const API = process.env.SIM_API ?? `http://localhost:${process.env.PORT ?? "4100"}`;
+const DEMO_PHONE = "34600000001";
+const PHONE = process.env.SIM_PHONE ?? DEMO_PHONE;
+const CONV = process.env.SIM_CONV ?? "sim_conv";
 const EMAIL = "demo@dilo.test";
 
 async function ensureBusiness(): Promise<string> {
   const { data: existing } = await db.from("businesses").select("id").eq("owner_phone", PHONE).maybeSingle();
   if (existing) return existing.id as string;
+  if (PHONE !== DEMO_PHONE) throw new Error(`no business with owner_phone ${PHONE}`);
   let userId: string | undefined;
   const { data: list } = await db.auth.admin.listUsers();
   userId = list?.users.find((u) => u.email === EMAIL)?.id;
@@ -48,13 +53,13 @@ const waBase = {
   id: randomUUID(),
   event: "message.received",
   profiles: [],
-  conversation: { id: "sim_conv", platformConversationId: "x", status: "active" },
+  conversation: { id: CONV, platformConversationId: "x", status: "active" },
   account: { id: "sim_wa_account", platform: "whatsapp", username: "sandbox" },
   timestamp: now,
 };
 const msg = (text: string, metadata?: object) => ({
   ...waBase,
-  message: { id: randomUUID(), conversationId: "sim_conv", platform: "whatsapp", platformMessageId: "wamid", direction: "incoming", text, attachments: [], sender: { id: PHONE, phoneNumber: `+${PHONE}` }, sentAt: now, isRead: false },
+  message: { id: randomUUID(), conversationId: CONV, platform: "whatsapp", platformMessageId: "wamid", direction: "incoming", text, attachments: [], sender: { id: PHONE, phoneNumber: `+${PHONE}` }, sentAt: now, isRead: false },
   metadata: metadata ?? null,
 });
 

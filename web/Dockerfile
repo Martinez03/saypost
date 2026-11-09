@@ -1,4 +1,4 @@
-# Dilo web: Next.js standalone server on port 3100.
+# Saypost web: Next.js standalone server on port 3100.
 # NEXT_PUBLIC_* values are inlined into the bundle at build time, so pass them as build args
 # (docker-compose.yml does it from the root .env). They are public; never pass secrets here.
 FROM node:22-alpine AS deps

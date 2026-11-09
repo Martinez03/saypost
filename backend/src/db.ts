@@ -1,5 +1,6 @@
-// Supabase (service role) and small typed helpers over the Dilo tables.
+// Supabase (service role) and small typed helpers over the Saypost tables.
 import { createClient } from "@supabase/supabase-js";
+import type { ApprovalMode } from "./approval.js";
 import { config } from "./config.js";
 
 export const db = createClient(config.supabaseUrl, config.supabaseServiceKey, {
@@ -11,7 +12,10 @@ export type Lang = "es" | "en";
 
 export interface Business {
   id: string;
+  /** Who created it. Access goes through workspace membership (workspace_members). */
   owner_id: string;
+  workspace_id: string;
+  approval_mode: ApprovalMode;
   name: string;
   category: string | null;
   city: string | null;
@@ -82,8 +86,22 @@ export async function getBusiness(id: string): Promise<Business | null> {
   return check(await db.from("businesses").select("*").eq("id", id).maybeSingle(), "getBusiness") as Business | null;
 }
 
-export async function getBusinessByOwner(ownerId: string): Promise<Business | null> {
-  return check(await db.from("businesses").select("*").eq("owner_id", ownerId).maybeSingle(), "getBusinessByOwner") as Business | null;
+/** Ids of the workspaces the user belongs to (oldest first). */
+export async function userWorkspaceIds(userId: string): Promise<string[]> {
+  const rows = check(
+    await db.from("workspace_members").select("workspace_id, created_at").eq("user_id", userId).order("created_at"),
+    "userWorkspaceIds",
+  ) as { workspace_id: string }[];
+  return rows.map((r) => r.workspace_id);
+}
+
+/** Businesses in these workspaces, oldest first (the web lists them in the same order). */
+export async function businessesInWorkspaces(workspaceIds: string[]): Promise<Business[]> {
+  if (!workspaceIds.length) return [];
+  return check(
+    await db.from("businesses").select("*").in("workspace_id", workspaceIds).order("created_at").order("id"),
+    "businessesInWorkspaces",
+  ) as Business[];
 }
 
 export async function getBusinessByPhone(phone: string): Promise<Business | null> {

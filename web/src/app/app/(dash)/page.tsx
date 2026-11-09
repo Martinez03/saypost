@@ -44,9 +44,9 @@ function eventIcon(type: string): { icon: LucideIcon; tone: string } {
 export default async function HomePage() {
   const [business, { supabase }, { t, lang }] = await Promise.all([requireBusiness(), getSession(), getI18n()]);
   const [accounts, inbound, events] = await Promise.all([
-    supabase.from("social_accounts").select("id", { count: "exact", head: true }).eq("status", "connected"),
-    supabase.from("messages").select("id", { count: "exact", head: true }).eq("direction", "in"),
-    supabase.from("events").select("id, type, title, created_at").order("created_at", { ascending: false }).limit(20),
+    supabase.from("social_accounts").select("id", { count: "exact", head: true }).eq("business_id", business.id).eq("status", "connected"),
+    supabase.from("messages").select("id", { count: "exact", head: true }).eq("business_id", business.id).eq("direction", "in"),
+    supabase.from("events").select("id, type, title, created_at").eq("business_id", business.id).order("created_at", { ascending: false }).limit(20),
   ]);
 
   const h = t.home;

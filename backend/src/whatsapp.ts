@@ -1,4 +1,4 @@
-// Messages from Dilo to the business owner on WhatsApp (through Zernio's inbox API).
+// Messages from Saypost to the business owner on WhatsApp (through Zernio's inbox API).
 import { addEvent, addMessage, type Business } from "./db.js";
 import { t } from "./i18n.js";
 import * as zernio from "./zernio.js";

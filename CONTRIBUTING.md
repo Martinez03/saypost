@@ -1,4 +1,4 @@
-# Contributing to Dilo
+# Contributing to Saypost
 
 Thanks for helping. Bug reports, fixes, new networks, translations and docs are all welcome.
 

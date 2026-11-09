@@ -1,5 +1,6 @@
-// Messages from the business owner to Dilo on WhatsApp.
+// Messages from the business owner to Saypost on WhatsApp.
 import { approveAction, rejectAction } from "./actions.js";
+import { ownerCanDecideOnWhatsapp } from "./approval.js";
 import { runAgent } from "./agent/agent.js";
 import { addEvent, addMessage, getAction, getBusiness, getBusinessByPhone, pendingActions, updateBusiness, type Business } from "./db.js";
 import { t } from "./i18n.js";
@@ -97,7 +98,9 @@ async function processOwnerMessage(biz: Business, ev: InboxMessageEvent, firstCo
   const m = tap.match(/^(approve|reject):([0-9a-f-]{36})$/);
   if (m) {
     await addMessage({ business_id: biz.id, direction: "in", kind: "text", body: ev.message.text ?? (m[1] === "approve" ? s.yes : s.no), zernio_message_id: ev.message.id });
-    await decide(biz, m[2]!, m[1] === "approve");
+    // Agency mode: an old button (sent before the mode changed) decides nothing.
+    if (!ownerCanDecideOnWhatsapp(biz.approval_mode)) await sendToOwner(biz, s.agencyDecides);
+    else await decide(biz, m[2]!, m[1] === "approve");
     return;
   }
 
@@ -116,7 +119,7 @@ async function processOwnerMessage(biz: Business, ev: InboxMessageEvent, firstCo
       } else if (att.type === "image" || att.type === "video") {
         kind = att.type;
         const ext = att.type === "image" ? (file.contentType.includes("png") ? "png" : "jpg") : "mp4";
-        mediaUrl = await zernio.uploadMedia(file.buf, file.contentType, `dilo-${Date.now()}.${ext}`);
+        mediaUrl = await zernio.uploadMedia(file.buf, file.contentType, `saypost-${Date.now()}.${ext}`);
       }
     } catch (e) {
       console.error("[inbound] attachment failed:", e);
@@ -138,6 +141,10 @@ async function processOwnerMessage(biz: Business, ev: InboxMessageEvent, firstCo
   // 3. A plain "yes"/"no" answers the latest proposal.
   if (kind === "text" && (YES.test(body) || NO.test(body))) {
     const pending = await pendingActions(biz.id);
+    if (pending.length && !ownerCanDecideOnWhatsapp(biz.approval_mode)) {
+      await sendToOwner(biz, s.agencyDecides);
+      return;
+    }
     if (pending.length) {
       await decide(biz, pending[0]!.id, YES.test(body));
       if (pending.length > 1) await sendToOwner(biz, s.otherPending(pending.length - 1));
@@ -151,6 +158,10 @@ async function processOwnerMessage(biz: Business, ev: InboxMessageEvent, firstCo
 
 async function decide(biz: Business, actionId: string, approve: boolean) {
   const s = t(biz.language);
+  if (!ownerCanDecideOnWhatsapp(biz.approval_mode)) {
+    await sendToOwner(biz, s.agencyDecides);
+    return;
+  }
   const action = await getAction(actionId);
   if (!action || action.business_id !== biz.id) {
     await sendToOwner(biz, s.alreadyDecided);
