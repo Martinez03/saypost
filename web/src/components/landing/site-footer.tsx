@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
-import { ZernioIcon } from "@/components/landing/brand-icons";
+import { ZernioIcon } from "@/components/brand-icons";
 import { LangToggle } from "@/components/lang-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import type { Dict } from "@/i18n";

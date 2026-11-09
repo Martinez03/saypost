@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { BRAND_NAMES, BrandGlyph, type BrandId } from "@/components/landing/brand-icons";
+import { BRAND_NAMES, BrandGlyph, type BrandId } from "@/components/brand-icons";
 import { cn } from "@/lib/utils";
 
 // Saypost's landing illustrations, drawn by hand as inline SVG in one style (see landing.css, "Illustration

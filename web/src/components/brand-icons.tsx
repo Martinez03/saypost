@@ -1,10 +1,12 @@
+import { useId } from "react";
 import { cn } from "@/lib/utils";
 
-// Monochrome marks for the networks Saypost publishes to, WhatsApp and Zernio. They tell visitors which
-// integrations exist; they don't imply endorsement. Network paths are from Simple Icons (CC0,
-// simpleicons.org). Simple Icons has no LinkedIn or Google Business Profile mark: LinkedIn is drawn
-// here and Google Business uses Google's "G". The Zernio marks are copied from zernio.com.
-// All 24x24, filled with currentColor.
+// Marks for the networks Saypost publishes to, WhatsApp and Zernio. They tell people which integrations
+// exist; they don't imply endorsement. Network paths are from Simple Icons (CC0, simpleicons.org).
+// Simple Icons has no LinkedIn or Google Business Profile mark: LinkedIn is drawn here and Google
+// Business uses Google's "G". The Zernio marks are copied from zernio.com. All 24x24.
+// - BrandIcon / BrandGlyph: monochrome, filled with currentColor (the landing).
+// - BrandLogo: each brand's own colours (the dashboard and the invite page), see the bottom of the file.
 
 export type BrandId =
   | "instagram"
@@ -133,4 +135,78 @@ export function ZernioIcon({ className }: { className?: string }) {
       />
     </svg>
   );
+}
+
+// ---------------------------------------------------------------- official colours
+
+/** The mark in its brand colour (official palettes; X, Threads and TikTok are monochrome by their own rules). */
+const BRAND_COLORS: Partial<Record<BrandId, string>> = {
+  facebook: "#0866FF",
+  linkedin: "#0A66C2",
+  bluesky: "#1185FE",
+  youtube: "#FF0000",
+  pinterest: "#E60023",
+  whatsapp: "#25D366",
+};
+
+/** Google's four-colour "G" (48x48), for Google Business Profile. */
+function GoogleG({ className, label }: { className?: string; label?: string }) {
+  return (
+    <svg viewBox="0 0 48 48" className={cn("size-6 shrink-0", className)} role={label ? "img" : undefined} aria-label={label} aria-hidden={label ? undefined : true}>
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+    </svg>
+  );
+}
+
+/**
+ * A network's logo in its own colours. The white inside the Facebook "f", the LinkedIn "in", the YouTube
+ * play button and the Pinterest "P" is drawn, not left transparent, so they read the same on dark
+ * surfaces. Decorative unless `label` is given (then role="img" with that name).
+ */
+export function BrandLogo({ id, className, label }: { id: BrandId; className?: string; label?: string }) {
+  const gid = useId().replace(/:/g, "");
+  if (id === "googlebusiness") return <GoogleG className={className} label={label} />;
+  const a11y = label ? { role: "img" as const, "aria-label": label } : { "aria-hidden": true as const };
+  const path = BRAND_PATHS[id];
+  return (
+    <svg viewBox="0 0 24 24" className={cn("size-6 shrink-0", className)} {...a11y}>
+      {id === "instagram" ? (
+        <>
+          <defs>
+            <radialGradient id={`${gid}-ig1`} cx="30%" cy="107%" r="150%">
+              <stop offset="0" stopColor="#FFDD55" />
+              <stop offset=".1" stopColor="#FFDD55" />
+              <stop offset=".5" stopColor="#FF543E" />
+              <stop offset="1" stopColor="#C837AB" />
+            </radialGradient>
+            <radialGradient id={`${gid}-ig2`} cx="-16%" cy="7%" r="65%">
+              <stop offset="0" stopColor="#3771C8" />
+              <stop offset=".128" stopColor="#3771C8" />
+              <stop offset="1" stopColor="#6600FF" stopOpacity="0" />
+            </radialGradient>
+          </defs>
+          <path d={path} fill={`url(#${gid}-ig1)`} />
+          <path d={path} fill={`url(#${gid}-ig2)`} />
+        </>
+      ) : (
+        <>
+          {id === "facebook" || id === "pinterest" ? <circle cx="12" cy="12" r="11.6" fill="#fff" /> : null}
+          {id === "linkedin" ? <rect x="4" y="4" width="16" height="16" fill="#fff" /> : null}
+          {id === "youtube" ? <path d="M9 16.2V7.8l7.4 4.2z" fill="#fff" /> : null}
+          <path d={path} fill={BRAND_COLORS[id] ?? "currentColor"} fillRule={id === "linkedin" ? "evenodd" : undefined} />
+        </>
+      )}
+    </svg>
+  );
+}
+
+/** Saypost / Zernio platform ids to brand marks (Zernio says "twitter" for X). */
+export function brandIdFor(platform: string): BrandId | null {
+  const key = platform.toLowerCase();
+  if (key === "twitter" || key === "x") return "x";
+  if (key === "google" || key === "gmb" || key === "google-business") return "googlebusiness";
+  return key in BRAND_PATHS ? (key as BrandId) : null;
 }

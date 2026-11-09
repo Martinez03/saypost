@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Familjen_Grotesk } from "next/font/google";
-import { BRAND_NAMES, BrandIcon, NETWORKS, ZernioIcon, ZernioLogo } from "@/components/landing/brand-icons";
+import { BRAND_NAMES, BrandIcon, NETWORKS, ZernioIcon, ZernioLogo } from "@/components/brand-icons";
 import { ChatMock } from "@/components/landing/chat-mock";
 import { CopyCommand } from "@/components/landing/copy-command";
 import { GITHUB_URL, getGithubStars, githubFile } from "@/components/landing/github";

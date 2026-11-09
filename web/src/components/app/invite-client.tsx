@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Check, Copy, Loader2, Mail, Plus, Send, UserPlus } from "lucide-react";
 import { toast } from "sonner";
-import { BrandIcon } from "@/components/landing/brand-icons";
+import { BrandLogo } from "@/components/brand-icons";
 import { useI18n } from "@/components/i18n-provider";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -165,7 +165,7 @@ export function InviteClient({ businessId, businessName, ownerPhone, language, a
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
               <a href={whatsapp} target="_blank" rel="noopener noreferrer" className={cn(buttonVariants({ variant: "outline" }), "h-9")}>
-                <BrandIcon id="whatsapp" className="size-4 text-[#25D366]" /> {v.sendWhatsapp}
+                <BrandLogo id="whatsapp" className="size-4" /> {v.sendWhatsapp}
               </a>
               <a href={email} className={cn(buttonVariants({ variant: "outline" }), "h-9")}>
                 <Mail aria-hidden /> {v.sendEmail}

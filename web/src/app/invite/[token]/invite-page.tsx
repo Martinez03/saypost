@@ -5,7 +5,7 @@ import { Check, ChevronDown, Link2Off, Loader2, LockKeyhole, Mic, Plus, RefreshC
 import { toast } from "sonner";
 import { AgencyTile } from "@/components/app/agency-brand-fields";
 import { Logo } from "@/components/brand/logo";
-import { BRAND_NAMES, BrandIcon, type BrandId } from "@/components/landing/brand-icons";
+import { BRAND_NAMES, BrandLogo, type BrandId } from "@/components/brand-icons";
 import { buttonVariants } from "@/components/ui/button";
 import { getDict, LANG_NAMES, LANGS, type Lang } from "@/i18n";
 import { storeLang } from "@/i18n/client";
@@ -193,7 +193,7 @@ export function InvitePage({ token, cookieLang }: { token: string; cookieLang: L
       className={cn("flex flex-col gap-3 rounded-2xl border bg-card p-4 transition-colors", x.connected && "border-primary/35 bg-primary-soft/40")}
     >
       <div className="flex items-start justify-between gap-2">
-        <BrandIcon id={brandId(x.platform)} className="size-7 text-foreground/85" />
+        <BrandLogo id={brandId(x.platform)} className="size-7" />
         {x.connected && (
           <span className="flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground" aria-hidden>
             <Check className="size-3.5" strokeWidth={3} />
@@ -290,8 +290,8 @@ export function InvitePage({ token, cookieLang }: { token: string; cookieLang: L
 
         <section aria-labelledby="next-title" className="grid gap-4 rounded-3xl bg-canvas p-5 sm:p-6">
           <div className="flex items-center gap-2.5">
-            <span className="flex size-9 items-center justify-center rounded-xl bg-[#25D366] text-white">
-              <BrandIcon id="whatsapp" className="size-5" />
+            <span className="flex size-9 items-center justify-center rounded-xl border bg-card">
+              <BrandLogo id="whatsapp" className="size-5" />
             </span>
             <h2 id="next-title" className="font-display text-xl leading-tight">
               {p.nextTitle}
