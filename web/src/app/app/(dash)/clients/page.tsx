@@ -7,7 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { getI18n } from "@/i18n/server";
 import { isCategory } from "@/lib/business";
+import { platformName } from "@/lib/platforms";
 import { InviteClient } from "@/components/app/invite-client";
+import { PlatformIcon } from "@/components/platform-icon";
 import { getBusinesses, getSession, getWorkspaceContext, requireBusiness } from "@/lib/session";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -20,7 +22,7 @@ export default async function ClientsPage() {
   const [current, all, { supabase }, { t }, ctx] = await Promise.all([requireBusiness(), getBusinesses(), getSession(), getI18n(), getWorkspaceContext()]);
   const ids = all.map((b) => b.id);
   const [accounts, pending] = await Promise.all([
-    supabase.from("social_accounts").select("business_id").eq("status", "connected").in("business_id", ids),
+    supabase.from("social_accounts").select("business_id, platform").eq("status", "connected").in("business_id", ids),
     supabase.from("actions").select("business_id").eq("status", "pending").in("business_id", ids),
   ]);
   const count = (rows: { business_id: string }[] | null, id: string) => (rows ?? []).filter((r) => r.business_id === id).length;
@@ -37,9 +39,10 @@ export default async function ClientsPage() {
           </Link>
         }
       />
-      <ul className="grid gap-3 sm:grid-cols-2">
+      <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 3xl:grid-cols-4">
         {all.map((b) => {
           const n = count(accounts.data, b.id);
+          const networks = [...new Set((accounts.data ?? []).filter((r) => r.business_id === b.id).map((r) => r.platform))];
           const p = count(pending.data, b.id);
           const here = b.id === current.id;
           const meta = [isCategory(b.category) ? t.business.categories[b.category] : b.category, b.city].filter(Boolean).join(" · ");
@@ -49,6 +52,15 @@ export default async function ClientsPage() {
                 <h2 className="truncate text-[0.9375rem] font-semibold">{b.name}</h2>
                 {meta && <p className="truncate text-xs text-muted-foreground">{meta}</p>}
               </div>
+              {networks.length > 0 && (
+                <ul className="flex flex-wrap gap-1.5" aria-label={g.accounts(n)}>
+                  {networks.map((p) => (
+                    <li key={p}>
+                      <PlatformIcon platform={p} label={platformName(p)} className="size-8" />
+                    </li>
+                  ))}
+                </ul>
+              )}
               <div className="flex flex-wrap gap-1.5">
                 <Badge variant={n > 0 ? "positive" : "secondary"}>{g.accounts(n)}</Badge>
                 <Badge variant={b.whatsapp_status === "active" ? "positive" : "secondary"}>{g.whatsapp[b.whatsapp_status]}</Badge>

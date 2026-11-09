@@ -4,6 +4,12 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Extra breakpoints for the wide dashboard (rem, so Tailwind orders them after lg/xl). */
+@theme {
+  --breakpoint-wide: 87.5rem; /* 1400px: Inicio and Settings in two columns */
+  --breakpoint-3xl: 112.5rem; /* 1800px: one more card per row */
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

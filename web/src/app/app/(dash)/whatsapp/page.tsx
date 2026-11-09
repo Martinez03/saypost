@@ -15,8 +15,10 @@ export default async function WhatsappPage() {
   return (
     <div className="grid gap-8">
       <PageHeader title={t.whatsapp.title} description={t.whatsapp.subtitle} />
-      <WhatsappPanel initialStatus={business.whatsapp_status} initialPhone={business.owner_phone} />
-      <Conversation businessId={business.id} timeZone={business.timezone} />
+      <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
+        <WhatsappPanel initialStatus={business.whatsapp_status} initialPhone={business.owner_phone} />
+        <Conversation businessId={business.id} timeZone={business.timezone} />
+      </div>
     </div>
   );
 }

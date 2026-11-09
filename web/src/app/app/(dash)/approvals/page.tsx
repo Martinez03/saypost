@@ -83,7 +83,7 @@ function ActionCard({ action, t, lang, timeZone, now, client }: { action: Action
       {ctx && (
         <div className="grid gap-1.5 rounded-lg border-l-2 border-border bg-muted/60 px-3 py-2.5 text-sm">
           <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            {ctx.platform && <PlatformIcon platform={ctx.platform} className="size-5 rounded-md text-[0.5rem]" />}
+            {ctx.platform && <PlatformIcon platform={ctx.platform} bare className="size-4" />}
             <span>
               {a.inReplyTo}
               {ctx.author && (
@@ -178,7 +178,7 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
         {pendingRows.length === 0 ? (
           <EmptyState icon={<CheckCheck />} title={a.empty} description={a.emptyText} />
         ) : (
-          <div className="grid gap-4">
+          <div className="grid items-start gap-4 wide:grid-cols-2">
             {pendingRows.map((action) => (
               <ActionCard key={action.id} action={action} t={t} lang={lang} timeZone={business.timezone} now={now} client={client(action)} />
             ))}
@@ -191,7 +191,7 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
         {recentRows.length === 0 ? (
           <p className="text-sm text-muted-foreground">{a.recentEmpty}</p>
         ) : (
-          <div className="grid gap-4">
+          <div className="grid items-start gap-4 wide:grid-cols-2">
             {recentRows.map((action) => (
               <ActionCard key={action.id} action={action} t={t} lang={lang} timeZone={business.timezone} now={now} client={client(action)} />
             ))}

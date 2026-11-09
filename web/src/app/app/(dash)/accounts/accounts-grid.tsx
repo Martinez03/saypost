@@ -122,14 +122,14 @@ export function AccountsGrid({ accounts, connected, invite }: { accounts: Row[];
         }
       />
 
-      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-5">
         {PLATFORMS.map((p) => {
           const rows = byPlatform.get(p.id) ?? [];
           const live = rows.filter((r) => r.status === "connected");
           return (
             <li key={p.id} className="flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-xs">
               <div className="flex items-center gap-3">
-                <PlatformIcon platform={p.id} className="size-9" />
+                <PlatformIcon platform={p.id} className="size-10 rounded-xl" />
                 <div className="min-w-0 flex-1">
                   <h2 className="truncate text-sm font-semibold">{p.name}</h2>
                   <p className="text-xs text-muted-foreground">{live.length ? a.connectedCount(live.length) : a.notConnected}</p>

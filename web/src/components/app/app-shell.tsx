@@ -22,7 +22,7 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/s
 import { setApiBusiness } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-// App frame: a sidebar on the grey canvas and the page on a white panel.
+// App frame: a sidebar on the grey canvas and the page on a white panel, as wide as the window allows (max 1440 px).
 // On phones the sidebar becomes a sheet behind a menu button.
 
 type NavKey = "home" | "approvals" | "posts" | "accounts" | "whatsapp" | "settings" | "clients";
@@ -232,7 +232,7 @@ export function AppShell({ children, ...props }: ShellProps & { children: ReactN
           </Link>
         </header>
         <main id="main" className="flex-1 bg-background md:rounded-xl md:border md:shadow-xs">
-          <div className="mx-auto w-full max-w-5xl px-4 pt-6 pb-12 sm:px-6 lg:px-8 lg:pt-8">{children}</div>
+          <div className="mx-auto w-full max-w-[90rem] px-4 pt-6 pb-12 sm:px-6 lg:px-10 lg:pt-9 lg:pb-16">{children}</div>
         </main>
       </div>
     </div>

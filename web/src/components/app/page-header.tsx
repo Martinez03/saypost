@@ -7,8 +7,8 @@ export function PageHeader({ title, description, actions, className }: { title: 
   return (
     <div className={cn("flex flex-wrap items-end justify-between gap-x-6 gap-y-4", className)}>
       <div className="min-w-0">
-        <h1 className="text-2xl leading-tight font-semibold tracking-[-0.022em] [overflow-wrap:anywhere]">{title}</h1>
-        {description && <div className="mt-1 max-w-2xl text-sm text-pretty text-muted-foreground">{description}</div>}
+        <h1 className="text-2xl leading-tight font-semibold tracking-[-0.022em] [overflow-wrap:anywhere] lg:text-[1.75rem]">{title}</h1>
+        {description && <div className="mt-1 max-w-3xl text-sm text-pretty text-muted-foreground lg:mt-1.5 lg:text-[0.9375rem]">{description}</div>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>

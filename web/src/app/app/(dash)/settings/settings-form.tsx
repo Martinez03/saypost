@@ -79,57 +79,62 @@ export function SettingsForm({ id, email, initial, branding }: { id: string; ema
     <form onSubmit={save} className="grid gap-8" noValidate>
       <PageHeader title={s.title} description={s.subtitle} />
 
-      <section aria-labelledby="profile-title" className="grid gap-5 rounded-xl border bg-card p-4 shadow-xs sm:p-6">
-        <SectionTitle id="profile-title" title={s.profileTitle} description={s.profileSubtitle} />
-        <BusinessFields
-          values={values}
-          showTimezone
-          nameError={nameError}
-          onChange={(p) => {
-            if (p.name !== undefined) setNameError(null);
-            patch(p);
-          }}
-        />
-      </section>
+      {/* A comfortable reading width; on wide screens the profile on the left and the rest alongside. */}
+      <div className="grid max-w-3xl items-start gap-8 wide:max-w-none wide:grid-cols-2">
+        <section aria-labelledby="profile-title" className="grid gap-5 rounded-xl border bg-card p-4 shadow-xs sm:p-6">
+          <SectionTitle id="profile-title" title={s.profileTitle} description={s.profileSubtitle} />
+          <BusinessFields
+            values={values}
+            showTimezone
+            nameError={nameError}
+            onChange={(p) => {
+              if (p.name !== undefined) setNameError(null);
+              patch(p);
+            }}
+          />
+        </section>
 
-      <section aria-labelledby="notes-title" className="grid gap-4 rounded-xl border bg-card p-4 shadow-xs sm:p-6">
-        <SectionTitle id="notes-title" title={s.notesTitle} description={s.notesSubtitle} />
-        <Textarea
-          id="notes"
-          aria-labelledby="notes-title"
-          rows={6}
-          maxLength={8000}
-          placeholder={s.notesPlaceholder}
-          value={values.notes}
-          onChange={(e) => patch({ notes: e.target.value })}
-        />
-      </section>
+        <div className="grid content-start gap-8">
+          <section aria-labelledby="notes-title" className="grid gap-4 rounded-xl border bg-card p-4 shadow-xs sm:p-6">
+            <SectionTitle id="notes-title" title={s.notesTitle} description={s.notesSubtitle} />
+            <Textarea
+              id="notes"
+              aria-labelledby="notes-title"
+              rows={6}
+              maxLength={8000}
+              placeholder={s.notesPlaceholder}
+              value={values.notes}
+              onChange={(e) => patch({ notes: e.target.value })}
+            />
+          </section>
 
-      <section aria-labelledby="notify-title" className="grid gap-4 rounded-xl border bg-card p-4 shadow-xs sm:p-6">
-        <SectionTitle id="notify-title" title={s.notifyTitle} description={s.notifySubtitle} />
-        <ul className="divide-y rounded-lg border">
-          {toggles.map((tg) => (
-            <li key={tg.key} className="flex items-center justify-between gap-4 px-3 py-3">
-              <span className="grid gap-0.5">
-                <label htmlFor={tg.key} className="text-sm font-medium">
-                  {tg.label}
-                </label>
-                <span id={`${tg.key}-hint`} className="text-xs text-muted-foreground">
-                  {tg.hint}
-                </span>
-              </span>
-              <Switch id={tg.key} checked={values[tg.key]} onCheckedChange={(checked) => patch({ [tg.key]: checked })} aria-describedby={`${tg.key}-hint`} />
-            </li>
-          ))}
-        </ul>
-      </section>
+          <section aria-labelledby="notify-title" className="grid gap-4 rounded-xl border bg-card p-4 shadow-xs sm:p-6">
+            <SectionTitle id="notify-title" title={s.notifyTitle} description={s.notifySubtitle} />
+            <ul className="divide-y rounded-lg border">
+              {toggles.map((tg) => (
+                <li key={tg.key} className="flex items-center justify-between gap-4 px-3 py-3">
+                  <span className="grid gap-0.5">
+                    <label htmlFor={tg.key} className="text-sm font-medium">
+                      {tg.label}
+                    </label>
+                    <span id={`${tg.key}-hint`} className="text-xs text-muted-foreground">
+                      {tg.hint}
+                    </span>
+                  </span>
+                  <Switch id={tg.key} checked={values[tg.key]} onCheckedChange={(checked) => patch({ [tg.key]: checked })} aria-describedby={`${tg.key}-hint`} />
+                </li>
+              ))}
+            </ul>
+          </section>
 
-      <section aria-labelledby="approval-title" className="grid gap-4 rounded-xl border bg-card p-4 shadow-xs sm:p-6" data-approval-mode>
-        <SectionTitle id="approval-title" title={t.agency.approvalTitle} description={t.agency.approvalSubtitle} />
-        <ApprovalModeField value={values.approval_mode} onChange={(approval_mode) => patch({ approval_mode })} />
-      </section>
+          <section aria-labelledby="approval-title" className="grid gap-4 rounded-xl border bg-card p-4 shadow-xs sm:p-6" data-approval-mode>
+            <SectionTitle id="approval-title" title={t.agency.approvalTitle} description={t.agency.approvalSubtitle} />
+            <ApprovalModeField value={values.approval_mode} onChange={(approval_mode) => patch({ approval_mode })} />
+          </section>
 
-      {branding}
+          {branding}
+        </div>
+      </div>
 
       {email && (
         <p className="text-sm text-muted-foreground">

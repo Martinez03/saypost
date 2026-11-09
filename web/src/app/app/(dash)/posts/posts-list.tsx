@@ -74,7 +74,7 @@ export function PostsList({ timeZone }: { timeZone: string }) {
       />
 
       {state === "loading" && !posts ? (
-        <div className="grid gap-3" aria-busy>
+        <div className="grid gap-3 xl:grid-cols-2" aria-busy>
           {Array.from({ length: 3 }, (_, i) => (
             <Skeleton key={i} className="h-32 rounded-xl" />
           ))}
@@ -92,7 +92,7 @@ export function PostsList({ timeZone }: { timeZone: string }) {
       ) : !posts || posts.length === 0 ? (
         <EmptyState icon={<Newspaper />} title={p.empty} description={p.emptyText} />
       ) : (
-        <ul className="grid gap-3">
+        <ul className="grid items-start gap-3 xl:grid-cols-2">
           {posts.map((post) => {
             const platforms = Array.isArray(post.platforms) ? post.platforms : [];
             const when = post.publishedAt
@@ -124,8 +124,8 @@ export function PostsList({ timeZone }: { timeZone: string }) {
                   {platforms.length > 0 && (
                     <ul className="flex flex-wrap gap-2">
                       {platforms.map((pl, i) => (
-                        <li key={`${pl.platform}-${i}`} className="flex items-center gap-1.5 rounded-full border bg-background py-0.5 pr-2 pl-0.5 text-xs">
-                          <PlatformIcon platform={pl.platform} className="size-5 rounded-full text-[0.5rem]" />
+                        <li key={`${pl.platform}-${i}`} className="flex items-center gap-1.5 rounded-full border bg-background py-1 pr-2.5 pl-1.5 text-xs">
+                          <PlatformIcon platform={pl.platform} bare className="size-4" />
                           <span className="font-medium">{platformName(pl.platform)}</span>
                           {label(pl.status) && <span className="text-muted-foreground">· {label(pl.status)}</span>}
                           {pl.url && (

@@ -58,11 +58,11 @@ export function StatsCards() {
           </Button>
         </div>
       )}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 wide:grid-cols-2">
         {cards.map(({ label, value, icon: Icon, sub }) => (
           <div key={label} className="grid gap-2 rounded-xl border bg-card p-4 shadow-xs">
             <div className="flex items-center justify-between gap-2 text-[0.8125rem] text-muted-foreground">
-              <span className="truncate">{label}</span>
+              <span className="min-w-0 truncate">{label}</span>
               <Icon className="size-4 shrink-0" aria-hidden />
             </div>
             {state === "loading" ? (
