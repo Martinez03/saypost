@@ -1,0 +1,13 @@
+node_modules
+.next
+.netlify
+.vercel
+out
+.env*
+!.env.example
+*.tsbuildinfo
+next-env.d.ts
+Dockerfile
+.dockerignore
+.landing-videos-tmp
+public/videos/landing

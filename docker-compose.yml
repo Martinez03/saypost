@@ -1,0 +1,59 @@
+# Self-hosted Dilo: the backend and the web, plus an optional Caddy for automatic HTTPS.
+#
+#   cp .env.example .env                              # fill it in (docs/SELF_HOSTING.md)
+#   docker compose up -d --build                      # backend on 127.0.0.1:4100, web on 127.0.0.1:3100
+#   docker compose --profile caddy up -d --build      # + Caddy on :80/:443 serving https://$DOMAIN
+#
+# The web bakes its NEXT_PUBLIC_* values in at build time: after changing SUPABASE_URL, SUPABASE_ANON_KEY,
+# API_URL or WEB_URL, rebuild it with `docker compose build web`.
+name: dilo
+
+services:
+  backend:
+    build: ./backend
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: "4100"
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-4100}:4100"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4100/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  web:
+    build:
+      context: ./web
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${SUPABASE_URL:-}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
+        NEXT_PUBLIC_API_URL: ${API_URL:-http://localhost:4100}
+        NEXT_PUBLIC_SITE_URL: ${WEB_URL:-http://localhost:3100}
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3100}:3100"
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.10-alpine
+    profiles: [caddy]
+    environment:
+      DOMAIN: ${DOMAIN:-}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [backend, web]
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

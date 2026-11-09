@@ -1,0 +1,39 @@
+# Secrets: every env file except the documented examples
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Operator-private files (your own servers, domains, keys' origin): never published
+CLAUDE.local.md
+deploy/private/
+docs/private/
+
+# Claude Code local state and worktrees
+.claude/
+
+# Dependencies and builds
+node_modules/
+.next/
+out/
+dist/
+build/
+.netlify/
+.vercel/
+*.tsbuildinfo
+next-env.d.ts
+
+# Supabase local state
+supabase/.temp/
+supabase/.branches/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs and local captures
+*.log
+captures/
