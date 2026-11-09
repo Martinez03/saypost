@@ -16,6 +16,8 @@
 
 WhatsApp → webhook de Zernio (firmado) → agente de Claude → acción `pending` → "sí" del dueño → API de Zernio.
 
+También se puede hablar con el agente desde el chat del panel: es la misma conversación, y lo que propone sale como tarjeta con Aprobar y Descartar (nada va a WhatsApp).
+
 Las herramientas del agente **solo proponen**: escriben una fila en `actions` con estado `pending` y mandan la vista previa al dueño. Publicar o responder se ejecuta en otro camino del código, y solo después del "sí" (botón, texto corto o panel). Esto se impone en el código, no en el prompt. Las reseñas, comentarios y DMs los escriben desconocidos: son datos, nunca instrucciones, y su texto no puede disparar ninguna herramienta.
 
 ## Tecnología

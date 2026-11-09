@@ -1,3 +1,4 @@
+import type { Action } from "@/lib/database.types";
 import { createClient } from "@/lib/supabase/client";
 
 // Calls the Saypost backend (NEXT_PUBLIC_API_URL) as the signed-in user. Browser only.
@@ -128,3 +129,17 @@ export type PublicInvite = {
   language: "es" | "en";
   platforms: { platform: string; connected: boolean; username: string | null }[];
 };
+
+/** POST /api/chat: the dashboard's web chat with the agent (docs/API.md). Files go as base64. */
+export type ChatRequest = {
+  text?: string;
+  image?: { data: string; type: string };
+  audio?: { data: string; type: string };
+};
+
+export type ChatSent = { kind: "text" | "audio" | "image" | "video" | "system"; body: string; mediaUrl: string | null };
+
+/** The agent's answer, or `pending` when it took too long (the reply then lands in the thread). */
+export type ChatResponse =
+  | { message: ChatSent; reply: string; proposals: Action[]; pending?: undefined }
+  | { message: ChatSent; pending: true };

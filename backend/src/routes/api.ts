@@ -3,6 +3,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { ensureProfile, isPlatform, syncAccounts } from "../accounts.js";
 import { approveAction, rejectAction } from "../actions.js";
 import { isApprovalMode } from "../approval.js";
+import { chatRoutes } from "../chat.js";
 import { config } from "../config.js";
 import { businessesInWorkspaces, db, getAction, getWorkspace, updateBusiness, userMemberships, userWorkspaceIds, type Business } from "../db.js";
 import { hashInviteToken, inviteUrl, isHttpsUrl, newInviteToken } from "../invites.js";
@@ -73,6 +74,9 @@ function zernioFail(reply: FastifyReply, e: unknown) {
 
 export async function apiRoutes(app: FastifyInstance) {
   app.addHook("preHandler", auth);
+
+  // The web chat with the agent (chat.ts): same thread and queue as WhatsApp, answers on the web only.
+  await chatRoutes(app);
 
   // Businesses in the user's workspaces with a short summary (agency view and switcher).
   app.get("/api/businesses", async (req) => {

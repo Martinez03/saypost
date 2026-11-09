@@ -31,6 +31,8 @@ export function Conversation({ businessId, timeZone }: { businessId: string; tim
       .from("messages")
       .select("id, direction, kind, body, media_url, created_at")
       .eq("business_id", businessId)
+      // The web chat shares the thread; this page shows the WhatsApp side only.
+      .eq("channel", "whatsapp")
       .order("created_at", { ascending: false })
       .limit(50);
     if (error) {

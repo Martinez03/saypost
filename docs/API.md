@@ -1,6 +1,6 @@
 # Contrato web ↔ backend
 
-Esquema de datos: `supabase/migrations/20261109150000_init.sql`, `20261109180000_workspaces.sql` (agencias) y `20261109210000_invites.sql` (invitaciones a clientes, tipo y marca del workspace).
+Esquema de datos: `supabase/migrations/20261109150000_init.sql`, `20261109180000_workspaces.sql` (agencias), `20261109210000_invites.sql` (invitaciones a clientes, tipo y marca del workspace) y `20261109230000_chat_channel.sql` (canal de cada mensaje: WhatsApp o el chat web).
 
 ## Workspaces (agencias)
 Cada negocio vive en un **workspace** (`workspaces`, `workspace_members` con rol `owner` | `member`). Todos los miembros de un workspace ven y gestionan todos sus negocios (RLS por pertenencia). Un negocio local suelto es un workspace con un solo negocio; una agencia es un workspace con muchos. `businesses.owner_id` ahora significa "creado por" y un usuario puede crear varios negocios.
@@ -11,6 +11,7 @@ Cada negocio vive en un **workspace** (`workspaces`, `workspace_members` con rol
 - `workspaces.brand_name` (1 a 60 caracteres) y `logo_url` (solo `https://`): la marca de la agencia que ven sus clientes en la página de invitación y en la pantalla de bienvenida de Zernio. Solo los `owner` del workspace pueden cambiarla (RLS y columnas concedidas); la web lo hace por `PATCH /api/workspace`.
 - `businesses.approval_mode`:
   - `owner_whatsapp` (por defecto): el dueño recibe cada propuesta con botones Sí / No y puede decir "sí"; también se aprueba en el dashboard.
+  - En los dos modos, lo que se propone desde el **chat web** (`actions.source = dashboard`) no llega nunca a WhatsApp, ni un "sí" o un botón de WhatsApp lo decide: solo `POST /api/actions/:id/approve | reject`. Su resultado ("🗓️ Programado…", "⚠️ No he podido…") vuelve al hilo web.
   - `agency_dashboard`: solo aprueba el dashboard. Lo que pide el dueño por WhatsApp recibe una sola nota fija ("Recibido 👍 Tu agencia lo revisa…"); reseñas, comentarios y DMs van solo al dashboard; un "sí" o un botón antiguo del dueño no aprueba nada. Al ejecutarse, el dueño recibe el resultado ("✅ Publicado…") de lo que pidió él, no de las respuestas que nunca vio. La decisión está en `backend/src/approval.ts`.
 
 ## Qué lee la web directamente de Supabase (con la sesión del usuario, RLS)
@@ -20,8 +21,8 @@ Cada negocio vive en un **workspace** (`workspaces`, `workspace_members` con rol
 | `workspaces`, `workspace_members` | Los workspaces del usuario (`kind`, `brand_name`, `logo_url`) y sus miembros. Solo lectura, salvo `brand_name` y `logo_url` para los `owner`. |
 | `invites` | Enlaces de invitación de los negocios del usuario (`id`, `business_id`, `created_by`, `expires_at`, `revoked_at`, `created_at`, `last_used_at`). Solo lectura y sin `token_hash`; crear y revocar pasa por el backend. |
 | `social_accounts` | Cuentas conectadas (`platform`, `username`, `display_name`, `profile_picture`, `status`). Solo lectura. |
-| `messages` | La conversación de WhatsApp entre el dueño y Saypost (`direction` in/out, `kind`, `body`, `media_url`). Solo lectura. |
-| `actions` | Acciones que esperan un "sí" o ya decididas (`kind`, `status`, `title`, `preview`, `context`, `error`). Solo lectura: aprobar o rechazar pasa por el backend. |
+| `messages` | La conversación entre el dueño (o su agencia) y Saypost, **una por negocio** para los dos canales (`direction` in/out, `kind`, `body`, `media_url`, `channel`: `whatsapp` \| `web`). Los `kind = system` del canal web son notas para el agente ("Descartado: …") que el chat no muestra. La página de WhatsApp lee solo `channel = whatsapp`. Solo lectura. |
+| `actions` | Acciones que esperan un "sí" o ya decididas (`kind`, `status`, `title`, `preview`, `payload`, `context`, `result`, `error`, `source`: `whatsapp` \| `webhook` \| `dashboard` = chat web). El chat web pinta como tarjetas las de `source = dashboard`. Solo lectura: aprobar o rechazar pasa por el backend. |
 | `events` | Actividad para el inicio del dashboard (`type`, `title`, `data`, `created_at`). Solo lectura. |
 
 `tone`: `friendly` | `professional` | `fun` | `elegant`. `language`: `es` | `en`.
@@ -46,6 +47,7 @@ Todos los `/api/*` llevan `Authorization: Bearer <access_token de Supabase>` y, 
 | `GET /api/whatsapp/status` | | `{status, sandboxNumber, phone}` | `inactive` / `pending` (falta contestar la plantilla) / `active`. |
 | `GET /api/posts` | | `{posts: Post[]}` | Últimos posts y programados del perfil en Zernio. `Post = {id, content, status, scheduledFor, publishedAt, platforms: [{platform, status, url}], mediaUrl}` |
 | `GET /api/stats` | | `{accounts, postsLast7d, pendingActions, reviews: {total, unanswered, averageRating}}` | Números para las tarjetas del inicio. Cada campo puede venir `null` si Zernio no lo da. |
+| `POST /api/chat` | `{text?, image?: {data, type}, audio?: {data, type}}` (`data` en base64, hasta 5 MB; foto JPEG, PNG, WebP o GIF; audio webm, ogg, mp4, mpeg, aac o wav; foto **o** audio, no los dos; texto hasta 4000) | `{message: {kind, body, mediaUrl}, reply, proposals: Action[]}` o `202 {message, pending: true}` | El chat web con el agente sobre el negocio de `X-Business-Id`. Sube la foto a Zernio o transcribe el audio, guarda el mensaje con `channel = web` y lanza el agente en la **misma cola por negocio que WhatsApp** (nunca dos turnos a la vez). La respuesta se guarda en el hilo con `channel = web` y no se manda nada por WhatsApp; las propuestas llevan `source = dashboard`. Tarda 10-30 s; si pasan 110 s responde `202` y la respuesta aparece luego en el hilo. Errores: `400 empty`, `text_too_long`, `bad_image`, `bad_audio`, `bad_request`; `413 file_too_large`; `422 transcribe_failed`; `429 rate_limited` (20 mensajes cada 5 minutos por usuario, con `Retry-After`); `502 upload_failed`, `agent_failed`. |
 | `POST /api/actions/:id/approve` | | `{action}` | Ejecuta una acción pendiente (publicar, responder…) y la devuelve con su nuevo estado. Vale cualquier negocio de los workspaces del usuario, no solo el de `X-Business-Id` (aprobaciones unificadas). |
 | `POST /api/actions/:id/reject` | | `{action}` | La descarta (mismo alcance). |
 | `POST /webhooks/zernio` | (Zernio) | `200` | Webhooks firmados de Zernio. |
@@ -68,3 +70,4 @@ Plataformas que la web ofrece conectar: `instagram`, `facebook`, `googlebusiness
 4. **Dashboard:** las mismas acciones se pueden aprobar o rechazar desde `/app/approvals`. Con más de un negocio, se ven las de todos con su cliente y un filtro.
 5. **Agencia:** en el onboarding elige "Soy una agencia" (nombre y logo, `POST /api/workspace`) → "Añade tu primer cliente" (`POST /api/businesses`) → el panel cambia a ese negocio (cookie `biz`). Más clientes desde "Añadir cliente" (`/app/clients/new`). El selector de la barra lateral y `/app/clients` aparecen en los workspaces `agency` o con más de un negocio.
 6. **Invitación al cliente:** la agencia pulsa "Invitar al cliente" (Inicio, Cuentas o la tarjeta de `/app/clients`) → `POST /api/invites` → copia el enlace o lo manda por WhatsApp (`wa.me` al móvil del dueño si lo tiene) o email → el cliente abre `/invite/<token>` en su móvil, sin cuenta → "Conectar" (`/public/invites/:token/connect`) → entra en la red con su usuario → vuelve con `?connected=` → `/public/invites/:token/sync` → la agencia lo ve en Cuentas y en la actividad. Después, la agencia activa su WhatsApp y el cliente solo usa WhatsApp.
+7. **Chat web:** el usuario escribe (o manda una foto o un audio) en `/app/chat` o en el botón flotante del panel → `POST /api/chat` → el agente lee el hilo entero (WhatsApp y web) y sabe que el mensaje viene de la web → responde en la web; si propone, la tarjeta sale en el chat con Aprobar / Descartar → `/api/actions/:id/approve | reject` → el resultado vuelve al hilo web. Un "sí" escrito en el chat no aprueba nada.
