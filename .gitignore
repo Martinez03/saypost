@@ -37,3 +37,6 @@ Thumbs.db
 # Logs and local captures
 *.log
 captures/
+
+# Demo video project (Remotion, recordings, renders): local only
+video/
